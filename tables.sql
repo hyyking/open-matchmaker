@@ -8,20 +8,22 @@ CREATE TABLE IF NOT EXISTS player (
 
 CREATE TABLE IF NOT EXISTS team (
     code INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(16) NOT NULL
+    name VARCHAR(16) NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS result (
     turn INT NOT NULL,
-    team INT NOT NULL,
-    opponent INT NOT NULL,
-    points INT,
-    won BOOLEAN,
+    team1 INT NOT NULL,
+    team2 INT NOT NULL,
+    elo1 FLOAT NOT NULL,
+    elo2 FLOAT NOT NULL,
+    points1 INT,
+    points2 INT,
 
-    PRIMARY KEY(turn, team),
+    PRIMARY KEY(turn, team1, team2),
     FOREIGN KEY (turn) REFERENCES turn(code),
-    FOREIGN KEY (team) REFERENCES team(code),
-    CHECK (won IN (0, 1))
+    FOREIGN KEY (team1) REFERENCES team(code),
+    FOREIGN KEY (team2) REFERENCES team(code)
 );
 
 CREATE TABLE IF NOT EXISTS turn (
