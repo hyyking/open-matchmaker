@@ -1,0 +1,30 @@
+CREATE TABLE IF NOT EXISTS player (
+    code INTEGER PRIMARY KEY AUTOINCREMENT,
+    team INT NOT NULL,
+    name VARCHAR(16) NOT NULL,
+
+    FOREIGN KEY (team) REFERENCES team(code)
+);
+
+CREATE TABLE IF NOT EXISTS team (
+    code INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(16) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS result (
+    turn INT NOT NULL,
+    team INT NOT NULL,
+    opponent INT NOT NULL,
+    points INT,
+    won BOOLEAN,
+
+    PRIMARY KEY(turn, team),
+    FOREIGN KEY (turn) REFERENCES turn(code),
+    FOREIGN KEY (team) REFERENCES team(code),
+    CHECK (won IN (0, 1))
+);
+
+CREATE TABLE IF NOT EXISTS turn (
+    code INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_time DATETIME NOT NULL
+);
