@@ -1,5 +1,9 @@
 #! /bin/python3.8
 
+""" script for database operations """
+
+from datetime import datetime
+
 from matchmaker import BASE_ELO, PPM, K
 
 TEAM_INSERT = "INSERT INTO team(name) VALUES (?)"
@@ -17,8 +21,9 @@ def add_team(conn, name):
 
 def add_player(conn, nom_equipe, nom):
     """ add a player to the database """
-    id = conn.execute(f'SELECT team.code FROM team WHERE team.name = "{nom_equipe}"').fetchone()[0]
-    conn.execute(PLAYER_INSERT, (id, nom))
+    query = f'SELECT team.code FROM team WHERE team.name = "{nom_equipe}"'
+    code = conn.execute(query).fetchone()[0]
+    conn.execute(PLAYER_INSERT, (code, nom))
 
 
 def new_elo(conn, turn, team) -> float:
@@ -36,7 +41,7 @@ def new_elo(conn, turn, team) -> float:
     prev_elo = res[team + 2]
     # get opponent elo
     opp_elo = res[2 if team == 1 else 3]
-    
+
     # compute expected score
     expected_score = (1 / ( 1 + 10**((opp_elo - prev_elo)/400))) * PPM
     return prev_elo + K * (res[team + 4] - expected_score)
@@ -44,25 +49,24 @@ def new_elo(conn, turn, team) -> float:
 
 def add_result(conn, turn, team1_name, team2_name, result):
     """ add a new match result to the database """
-    (r1, r2) = result.split("-")
-    assert(r1)
-    assert(r2)
+    (res1, res2) = result.split("-")
+    assert res1
+    assert res2
     query = 'SELECT team.code FROM team WHERE team.name = "{team}"'
     id1 = conn.execute(query.format(team=team1_name)).fetchone()[0]
     id2 = conn.execute(query.format(team=team2_name)).fetchone()[0]
 
     if turn == 1:
-        conn.execute(RESULT_INSERT, (turn, id1, id2, BASE_ELO, BASE_ELO, r1, r2))
+        conn.execute(RESULT_INSERT, (turn, id1, id2, BASE_ELO, BASE_ELO, res1, res2))
     else:
         elo1 = new_elo(conn, turn, id1)
         elo2 = new_elo(conn, turn, id2)
-        conn.execute(RESULT_INSERT, (turn, id1, id2, elo1, elo2, r1, r2))
+        conn.execute(RESULT_INSERT, (turn, id1, id2, elo1, elo2, res1, res2))
 
 def add_turn(conn):
     """ add a new turn to the database """
-    from datetime import datetime
     conn.execute(TURN_INSERT, (datetime.now(),))
-    print(conn.execute(f'SELECT MAX(turn.code) FROM turn').fetchone()[0])
+    print(conn.execute('SELECT MAX(turn.code) FROM turn').fetchone()[0])
 
 def summarise(conn):
     """ summarise team data """
@@ -96,12 +100,11 @@ def summarise_results(conn):
         prev = group.get(key, [])
         group[key] = prev + [val]
 
-    for (key, value) in group.items():
-        from datetime import datetime
-        time = datetime.fromisoformat(key[1]).strftime('%y-%m-%d %H:%M')
-        print(f"{time} | {key[0]}:")
-        for value in value:
-            print(f"    {value[0]} vs {value[1]} ({value[2]}-{value[3]})")
+    for ((turn, time), matches) in group.items():
+        time = datetime.fromisoformat(time).strftime('%y-%m-%d %H:%M')
+        print(f"{time} | {turn}:")
+        for match in matches:
+            print(f"    {match[0]} vs {match[1]} ({match[2]}-{match[3]})")
 
 
 
@@ -110,10 +113,11 @@ if __name__ == "__main__":
     import sqlite3 as sql
     import argparse as ap
 
-    def parser() -> ap.ArgumentParser:
+    def argparser() -> ap.ArgumentParser:
+        """ Create the argparser """
         parser = ap.ArgumentParser(description = "Add values to the database")
         command = parser.add_subparsers(dest = "command", required = True)
-        
+
         team = command.add_parser("team", help="add a team to the database")
         team.add_argument("nom", type=str)
 
@@ -133,7 +137,8 @@ if __name__ == "__main__":
         return parser
 
     def main(conn: sql.Cursor):
-        args = parser().parse_args()
+        """ match on commands """
+        args = argparser().parse_args()
         if args.command == "team":
             add_team(conn, args.nom)
         elif args.command == "player":
@@ -148,7 +153,6 @@ if __name__ == "__main__":
             summarise_results(conn)
         else:
             print("command not found")
-        return
 
-    with sql.connect("db.sqlite3") as conn:
-        main(conn)
+    with sql.connect("db.sqlite3") as db:
+        main(db)
