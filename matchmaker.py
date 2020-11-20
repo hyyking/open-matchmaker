@@ -35,7 +35,13 @@ class Match:
         escore1 = self.team1.expected_score(self.team2)
         escore2 = self.team2.expected_score(self.team1)
         distance = math.exp(-abs(escore1 - escore2))
-        return distance
+        return distance + (self.period() / distance)
+
+    def period(self) :
+        T = 30
+        D = 0.2
+        t = self.turn * 1000
+        return max((-1) ** int((t % T)/T >= D), 0)
     
     def pretty(self) -> str:
         e1 = self.team1.expected_score(self.team2)
