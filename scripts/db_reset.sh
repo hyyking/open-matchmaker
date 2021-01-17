@@ -10,8 +10,7 @@ sqlite3 db.sqlite3 < tables.sql
 ./insert.py team "FC Zizou"
 ./insert.py team "Les micros d'argent"
 ./insert.py team "Les gagnants"
-
-./insert.py team "ukn"
+./insert.py team "Les devin-si"
 
 ./insert.py player "Koba la Defaite" "Leo"
 ./insert.py player "Koba la Defaite" "Victoire"
@@ -27,6 +26,5 @@ sqlite3 db.sqlite3 < tables.sql
 ./insert.py player "Les micros d'argent" "Paul"
 ./insert.py player "Les gagnants" "Arnaud"
 ./insert.py player "Les gagnants" "Margaux"
-
-./insert.py player "ukn" "Leonard"
-./insert.py player "ukn" "Kristina"
+./insert.py player "Les devin-si" "Leonard"
+./insert.py player "Les devin-si" "Kristina"

@@ -16,6 +16,8 @@ Beware that the system is made to be used with an even number of teams
 
 ## System
 
+> [french article](PROJECT.md)
+
 The system is based around an elo model with a seasonal parameter. Model constants
 are found in the `matchmaking.py` file.
 
@@ -35,3 +37,5 @@ SEASONAL:
 The seasonal parameter's purpose is to reduce the distance between higher and lower
 ranked teams. And thus add distance to teams with similar ranks. This adds a bit of
 variance between matches and allows lower teams to upset and gain more elo.
+
+

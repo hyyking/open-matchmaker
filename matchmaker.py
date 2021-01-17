@@ -35,7 +35,7 @@ class Team:
 
 @dataclass
 class Match:
-    """ A match is a group of two teams at a turn """
+    """ A match is a pair of teams at a fixed turn """
     turn: int
     team1: Team
     team2: Team
@@ -44,8 +44,8 @@ class Match:
         """ compute principal's utility of the match """
         escore1 = self.team1.expected_score(self.team2)
         escore2 = self.team2.expected_score(self.team1)
-        distance = math.exp(-abs(escore1 - escore2))
-        return distance + (self.period() / distance)
+        distance = math.exp(-abs(escore1 - escore2)) # ]0; 1[
+        return distance + (self.period() / distance) # ]0; +inf[
 
     def period(self) -> float:
         """ compute periodic factor for the turn: {0, 1} """
@@ -77,9 +77,9 @@ class Match:
 @dataclass(repr=False)
 class Set:
     """ A set represents all matches played in a turn """
-    matches: (Match, Match, Match, Match)
+    matches: list
 
-    def utility(self):
+    def utility(self) -> float:
         """ compute principal's utility of the set """
         return sum(map(lambda x: x.utility(), self.matches))
     def __repr__(self):
@@ -123,7 +123,11 @@ def make_matches(turn, teams):
         return True
     p_matches = { Match(turn, *teams) for teams in it.combinations(teams, 2) }
     p_matches.difference_update(PREV_MATCHES)
-    p_sets = [ Set(matches) for matches in it.combinations(p_matches, 4) if appear_once(matches) ]
+    p_sets = [ 
+        Set(matches)
+        for matches in it.combinations(p_matches, int(len(teams)/2))
+        if appear_once(matches)
+    ]
     return max(p_sets).matches
 
 
@@ -132,7 +136,7 @@ if __name__ == "__main__":
     import argparse as ap
     def argparser() -> ap.ArgumentParser:
         """ Create argument parser """
-        parser = ap.ArgumentParser(description = "Add values to the database")
+        parser = ap.ArgumentParser(description = "Generate match pairs for next turn")
         parser.add_argument("turn", type=int)
         return parser
 
@@ -180,7 +184,6 @@ if __name__ == "__main__":
 
         for match in matches:
             print(match.pretty())
-
 
     args = argparser().parse_args()
     with sql.connect("db.sqlite3") as db:
