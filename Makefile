@@ -1,8 +1,9 @@
+DATABASE = matchmaker.sqlite3
+SQL = matchmaker_db.sql
+
 run:
 	@python -m bot
-
-render:
-	pandoc --mathjax project/README.md -o project.pdf
-
+db:
+	@sqlite3 $(DATABASE) < $(SQL)
 tree:
 	@tree --dirsfirst -I "__pycache__"
