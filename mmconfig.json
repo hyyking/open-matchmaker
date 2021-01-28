@@ -1,0 +1,10 @@
+{
+    "base_elo": 1000,
+    "points_per_match": 7,
+    "k_factor": 16,
+
+    "period": {
+	"active": 3.0,
+	"duty_cycle": 0.2
+    }
+}
