@@ -1,5 +1,3 @@
-#! /bin/python3.8
-
 """ script for database operations """
 
 from datetime import datetime

@@ -123,7 +123,7 @@ $$ U(E_a, E_b, i) = \exp\{-|E_a - E_b|\} + \frac{p(i)}{\exp\{-|E_a - E_b|\}} $$
 Avec p(i) une fonction sinusoïdale carré active (1) en T pendant D et 0 sinon. T représente la période de la fonction et D le temps d'activation. Dans le modèle `T = 3` et `D = 0.2`, soit toutes les 3 périodes
 pendant 1 période. La fonction est représentée ci-dessous en temps discret:
 
-![p(i)](./static/sin.png)
+![p(i)](static/sin.png)
 
 Le choix d'une fonction exponentielle négative composée avec la valeur absolue permet de garantir que l'écart
 est pris en valeur absolue (positif) et donc que l'utilité est décroissante avec la distance. Le paramètre

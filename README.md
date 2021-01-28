@@ -1,25 +1,19 @@
 # Baby'Haxball MatchMaker
 
-![Affiche](static/affiche.png)
+![Affiche](project/static/affiche.png)
 
 ## Usage
 
-Beware that the system is made to be used with an even number of teams
-
-1. Generate database (see database script)
-2. Add teams (see database script)
-3. Add players (see database script)
-4. Check with `./insert.py summary`
-5. Generate pairs with `./matchmaking.py {turn}`
-6. Generate the played round and insert results (see mock data script)
-7. Check data with `./insert.py matches`
+1. Create a discord bot
+2. Set token environment variable (`export DISCORD_TOKEN = ?`)
+3. Run with `make run`
 
 ## System
 
-> [french article](PROJECT.md)
+> [french article](project/PROJECT.md)
 
 The system is based around an elo model with a seasonal parameter. Model constants
-are found in the `matchmaking.py` file.
+are found in the `matchmaking/matchmaking.py` file.
 
 Summary:
 
@@ -37,5 +31,3 @@ SEASONAL:
 The seasonal parameter's purpose is to reduce the distance between higher and lower
 ranked teams. And thus add distance to teams with similar ranks. This adds a bit of
 variance between matches and allows lower teams to upset and gain more elo.
-
-
