@@ -2,3 +2,6 @@
 .env*
 *.log
 *.sqlite3
+**.ign
+
+**/__pycache__
