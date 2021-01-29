@@ -3,5 +3,5 @@
 *.log
 *.sqlite3
 **.ign
-
+*.py
 **/__pycache__
