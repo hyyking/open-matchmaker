@@ -2,12 +2,14 @@
 
 from datetime import datetime
 import sqlite3 as sql
+from dataclasses import dataclass, field
+from typing import Optional, List
 
 from .operations import Insertable, Loadable, UniqueId
 from .template import ColumnQuery, QueryKind, Values
 
-from dataclasses import dataclass, field
-from typing import Optional
+from matchmaker import Database
+
 
 __all__ = ("Player", "Team", "Round", "RoundUpdate", "Match", "Result")
 
@@ -73,12 +75,12 @@ class RoundUpdate(Round):
 
 @dataclass
 class Team(Insertable, Loadable, UniqueId):
-    team_id: Optional[int] = field(default=None, init=False)
+    team_id: Optional[int] = field(default=None)
     name: Optional[str] = field(default=None)
     player_one: Optional[Player] = field(default=None)
     player_two: Optional[Player] = field(default=None)
     
-    elo: Optional[float] = field(default=None, init=False)
+    elo: Optional[float] = field(default=None)
 
     def __eq__(self, other):
         return self.code == other.code
@@ -86,9 +88,31 @@ class Team(Insertable, Loadable, UniqueId):
     def __hash__(self):
         return hash(self.team_id)
     
-    @classmethod
-    def load_from(cls, conn: sql.Cursor, team_id: int):
-        raise NotImplementedError
+    def absorb_result(self, result: "Result"):
+        self.elo += result.delta
+
+    def has_player(self, player: Player):
+        return self.player_one == player or self.player_two == player
+
+    @classmethod 
+    def load_from(cls, db: Database, rhs):
+        query = f"""
+            SELECT team.team_id, p1.name, p1.discord_id, p2.name, p2.discord_id
+            FROM team
+            INNER JOIN player as p1 ON team.player_one = p1.discord_id
+            INNER JOIN player as p2 ON team.player_two = p2.discord_id
+            WHERE team.name = '{rhs.name}'
+        """
+        team_id, p1name, p1id, p2name, p2id = db.conn.execute(query).fetchone()
+
+        team = cls(
+            team_id=team_id,
+            name=rhs.name,
+            player_one=Player(p1id, p1name),
+            player_two=Player(p2id, p2name),
+            elo=rhs.elo
+        )
+        return team
 
     @property
     def unique_query(self):
@@ -115,7 +139,7 @@ class Result(Insertable, Loadable, UniqueId):
         return Result(self.team, self.points + other.points, self.delta + other.delta)
     
     @classmethod
-    def load_from(cls, conn: sql.Cursor, result_id):
+    def load_from(cls, conn: sql.Cursor):
         raise NotImplementedError
     
     @property

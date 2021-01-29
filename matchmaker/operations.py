@@ -21,6 +21,6 @@ class UniqueId(abc.ABC):
 
 class Loadable(abc.ABC):
     @abc.abstractclassmethod
-    def load_from(cls, conn: sql.Cursor, *args, **kwargs):
+    def load_from(cls, conn: sql.Cursor, rhs):
         raise NotImplementedError
 

@@ -53,6 +53,12 @@ class Values(AsStatement, tuple):
         values = ",".join(map(convert, self))
         return f"({values})"
 
+@dataclass
+class Sum(AsStatement):
+    header: str
+    def render(self):
+        return f"SUM({self.header})"
+
 @dataclass(repr=False)
 class ColumnQuery(AsStatement):
     kind: QueryKind
@@ -76,7 +82,8 @@ class ColumnQuery(AsStatement):
         return cls(kind, table, [key], Eq(key, value))
 
     def join_headers(self) -> str:
-        return ",".join(self.headers)
+        hmap = lambda x: x.render() if isinstance(x, AsStatement) else x
+        return ",".join(map(hmpa, self.headers))
 
     def render(self) -> str:
         query = None

@@ -8,6 +8,7 @@ import json
 
 
 from matchmaker import Database, tables
+from matchmaker.context import Context
 
 @dataclass
 class Config:
@@ -16,6 +17,8 @@ class Config:
     k_factor: int = field(default=32)
 
     period: Dict[str, float] = field(default_factory=dict)
+
+    trigger_threshold: int = field(default=10)
 
     ok_prefix: str = field(default=":smile:")
     err_prefix: str = field(default=":weary:")
@@ -29,16 +32,16 @@ class Config:
 
         for key, value in cfg.items():
             if not hasattr(cls, key):
-                raise KeyError
+                raise KeyError(key)
             setattr(cls, key, value)
         return cls
 
 
 class MatchMaker:
-    def __init__(self, database: Database, config: Config):
+    def __init__(self, config: Config, database: Database):
         self.database = database
         self.config = config
-        self.queue: List[Team] = []
+        self.context = Context()
 
 
 #   import itertools as it

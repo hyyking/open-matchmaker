@@ -39,9 +39,9 @@ class Database:
     def load(self, query: Loadable) -> Loadable:
         assert isinstance(query, Loadable)
         try: 
-            query.load_from(self.conn)
+            l = type(query).load_from(self, query)
             self.logger.debug(f"Executed load query for {query}")
-            return False
+            return l
         except Exception as err:
             context = {
                 "title": "Load",
@@ -50,7 +50,7 @@ class Database:
                 "exception": err
             }
             self.logger.error(QUERYERROR.format(**context))
-            return True
+            return None
 
     def exists_unique(self, query: UniqueId) -> bool:
         """ check existance of a value in database """

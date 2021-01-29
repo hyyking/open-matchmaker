@@ -80,9 +80,9 @@ if __name__ == "__main__":
    
     stream_log = logging.StreamHandler(stream=sys.stdout)
     stream_log.setFormatter(formatter)
-    db = Database(getattr(parsed, "database"), log_handler=stream_log, log_level=level)
     
-    mm = mm.MatchMaker(db, config)
+    db = Database(getattr(parsed, "database"), log_handler=stream_log, log_level=level)
+    mm = mm.MatchMaker(config, db)
 
     bot = MatchMakerBot(db, mm, command_prefix = "+")
     PlayerCog(bot)

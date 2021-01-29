@@ -3,6 +3,11 @@
     "points_per_match": 7,
     "k_factor": 16,
 
+    "trigger_threshold": 10,
+
+    "err_prefix": ":weary:",
+    "ok_prefix": ":smile:",
+
     "period": {
 	"active": 3.0,
 	"duty_cycle": 0.2

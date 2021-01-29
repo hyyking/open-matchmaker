@@ -51,7 +51,7 @@ class PlayerCog(commands.Cog):
             query.kind = QueryKind.SELECT
             team = self.bot.db.execute(query, "RegisterFetchTeamName").fetchone()[0]
             message = self.bot.fmterr(
-                f"'{current.name}' is already in a team with '{teammate.name}' ('{team}')"
+                f"'{current.name}' is already in a team with '{teammate.name}' ('{team}')!"
             )
             await ctx.message.channel.send(
                 content=message,
@@ -67,3 +67,67 @@ class PlayerCog(commands.Cog):
                 reference=ctx.message
             )
         return
+
+    @commands.command()
+    async def add(self, ctx, *, team: str):
+        current = Player(ctx.message.author.id, ctx.message.author.name)
+        mmctx = self.bot.mm.context
+
+        query = ColumnQuery.from_row("team", "name", team, kind=QueryKind.EXISTS)
+        if not self.bot.db.exists(query, "AddTeamExists"):
+            message = self.bot.fmterr(f"'{team}' is not a valid team name!")
+            await ctx.message.channel.send(content=message, reference=ctx.message)
+            return
+
+        team = self.bot.db.load(Team(name=team, elo=self.bot.mm.config.base_elo))
+        if not team.has_player(current):
+            message = self.bot.fmterr(f"You are not part of this team!")
+            await ctx.message.channel.send(content=message, reference=ctx.message)
+
+        if mmctx.has_player(team.player_one):
+            curr = mmctx.get_team_of_player(team.player_one)
+            message = self.bot.fmterr(
+                f"'{team.player_one.name}' is queuing in team '{curr.name}'!"
+            )
+            await ctx.message.channel.send(content=message, reference=ctx.message)
+        elif mmctx.has_player(team.player_two):
+            curr = mmctx.get_team_of_player(team.player_one)
+            message = self.bot.fmterr(
+                f"'{team.player_two.name}' is queuing in team '{curr.name}'!"
+            )
+            await ctx.message.channel.send(content=message, reference=ctx.message)
+        else:
+            mmctx.queue_team(team)
+
+            message = self.bot.fmtok(f"""queued {team.name}""")
+            await ctx.message.channel.send(
+                content=message,
+                reference=ctx.message
+            )
+
+    @commands.command()
+    async def remove(self, ctx):
+        current = Player(ctx.message.author.id, ctx.message.author.name)
+        mmctx = self.bot.mm.context 
+        
+        if not mmctx.has_player(current):
+            message = self.bot.fmterr(f"None of your teams are queued!")
+            await ctx.message.channel.send(content=message, reference=ctx.message)
+
+        team = mmctx.get_team_of_player(current)
+        assert mmctx.dequeue_team(team)
+
+        message = self.bot.fmtok(f"dequeued {team.name}")
+        await ctx.message.channel.send(
+            content=message,
+            reference=ctx.message
+        )
+
+    @commands.command()
+    async def who(self, ctx):
+        mmctx = self.bot.mm.context
+        queue = list(map(lambda t: f"{t.name}({t.elo})", mmctx.queue))
+        threshold = self.bot.mm.config.trigger_threshold
+        message = f"""```[{len(queue)} / {threshold}]
+{", ".join(queue)}```"""
+        await ctx.message.channel.send(content=message, reference=ctx.message)
