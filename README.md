@@ -11,6 +11,32 @@
 
 ## Configuration
 
+Bot and matchmaker are configurable independently, however you can specify a single
+config file (default is [`mmconfig.json`](mmconfig.json)):
+
+```json
+{
+    "bot": {
+	"command_prefix": "+",
+	"err_prefix": ":weary:",
+	"ok_prefix": ":smile:"
+    },
+
+    "matchmaker": {
+	"base_elo": 1000,
+	"points_per_match": 7,
+	"k_factor": 16,
+
+	"trigger_threshold": 10,
+
+	"period": {
+	    "active": 3.0,
+	    "duty_cycle": 0.2
+	}
+    }
+}
+```
+
 ## System
 
 > description article in [french](project/PROJECT.md)

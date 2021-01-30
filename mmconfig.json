@@ -6,13 +6,11 @@
     },
 
     "matchmaker": {
-
 	"base_elo": 1000,
 	"points_per_match": 7,
 	"k_factor": 16,
 
 	"trigger_threshold": 10,
-
 
 	"period": {
 	    "active": 3.0,

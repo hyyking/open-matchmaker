@@ -1,31 +1,8 @@
-#! /bin/python3.8
+from .matchmaker import MatchMaker
+from .config import Config
 
-""" generate pairs for the next turn of the db """
+__all__ = ("MatchMaker", "Config")
 
-import logging
-from dataclasses import dataclass, field
-from typing import List, Dict
-
-from .db import Database
-from .context import Context
-
-@dataclass
-class Config:
-    base_elo: int = field(default=1000)
-    points_per_match: int = field(default=1)
-    k_factor: int = field(default=32)
-
-    period: Dict[str, float] = field(default_factory=dict)
-
-    trigger_threshold: int = field(default=10)
- 
-
-class MatchMaker:
-    def __init__(self, config: Config, database: Database):
-        self.logger = logging.getLogger(__name__)
-        self.database: Database = database
-        self.config: Config = config
-        self.context: Context = Context()
 
 
 #   import itertools as it
