@@ -16,9 +16,6 @@ __all__ = ("Player", "Team", "Round", "Match", "Result")
 class Player(Table, Insertable, Loadable):
     discord_id: int = field(default=0)
     name: Optional[str] = field(default=None)
-
-    def __hash__(self):
-        return hash(self.discord_id)
     
     @property
     def primary_key(self) -> str:
@@ -40,10 +37,7 @@ class Round(Table, Insertable, Loadable):
     start_time: Optional[datetime] = field(default=None)
     end_time: Optional[datetime] = field(default=None)
     participants: Optional[int] = field(default=None)
-    
-    def __hash__(self):
-        return hash(self.round_id)
-    
+       
     @property
     def table(self) -> str:
         return "turn"
@@ -70,9 +64,6 @@ class Team(Table, Insertable, Loadable):
     player_two: Optional[Player] = field(default=None)
     
     elo: float = field(default=0)
-
-    def __eq__(self, other):
-        return self.code == other.code
 
     def __hash__(self):
         return hash(self.team_id)
@@ -116,9 +107,6 @@ class Result(Table, Insertable, Loadable):
     points: Optional[int] = field(default=0)
     delta: float = field(default=0)
 
-    def __hash__(self):
-        return hash(self.result_id)
-
     def __add__(self, other):
         assert self.team == other.team
         return Result(self.team, self.points + other.points, self.delta + other.delta)
@@ -146,10 +134,7 @@ class Match(Table, Insertable, Loadable):
     team_one: Optional[Result] = field(default=None)
     team_two: Optional[Result] = field(default=None)
     odds_ratio: float = field(default=1)
-    
-    def __hash__(self):
-        return hash(self.match_id)
-
+     
     @classmethod
     def load_from(cls, conn: Database, rhs):
         raise NotImplementedError
