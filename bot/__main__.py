@@ -2,9 +2,7 @@ import os, sys, logging, argparse, logging
 
 from . import cogs
 
-from bot import MatchMakerBot, config as cfg
-from matchmaker import Database, mm
-
+from bot import MatchMakerBot, MatchMaker, Database, config as cfg
 
 if __name__ == "__main__":
     def parse() -> argparse.ArgumentParser:
@@ -17,7 +15,7 @@ if __name__ == "__main__":
         parser.add_argument(
             "--config",
             type=str,
-            default="mmconfig.json",
+            default=None,
             help="Sets config file"
         )
         parser.add_argument(
@@ -57,8 +55,9 @@ if __name__ == "__main__":
         
         db = Database(database)
 
-        botcfg, mmcfg = cfg.from_file(config)
-        bot = MatchMakerBot(botcfg, db, mm.MatchMaker(mmcfg, db), [
+        botcfg, mmcfg = cfg.from_file(config) if config is not None else cfg.default()
+
+        bot = MatchMakerBot(botcfg, MatchMaker(mmcfg, db), [
             cogs.PlayerCog(),
             cogs.AdminCog()
         ])

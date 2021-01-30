@@ -1,28 +1,26 @@
 import logging
 from typing import List
 
-from .config import Config
+from .config import BotConfig
 
 from discord.ext import commands
 from matchmaker import Database, MatchMaker
 
-__all__ = ("MatchMakerBot")
+__all__ = ("MatchMakerBot", "Database", "MatchMaker")
 
 class MatchMakerBot(commands.Bot):
     def __init__(self,
-            config: Config,
-            db: Database,
+            config: BotConfig,
             mm: MatchMaker,
             cogs: List["BotContext"]):
         super().__init__(command_prefix=config.command_prefix)
 
         self.logger = logging.getLogger(__name__)
-        self.db = db
         self.mm = mm
         self.config = config
         for cog in cogs:
             setattr(cog, "__bot", self)
-            setattr(cog, "__db", self.db)
+            setattr(cog, "__db", self.mm.db)
             setattr(cog, "__mm", self.mm)
             self.add_cog(cog)
 
