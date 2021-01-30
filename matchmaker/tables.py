@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List
 
 from .operations import Insertable, Loadable, UniqueId
-from .template import ColumnQuery, QueryKind, Values
+from .template import ColumnQuery, QueryKind, Values, Sum, Where, Eq
 
 from matchmaker import Database
 
@@ -14,7 +14,7 @@ __all__ = ("Player", "Team", "Round", "RoundUpdate", "Match", "Result")
 
 @dataclass
 class Player(Insertable, Loadable, UniqueId):
-    discord_id: Optional[int] = field(default=None)
+    discord_id: int = field(default=0)
     name: Optional[str] = field(default=None)
 
     def __hash__(self):
@@ -36,7 +36,7 @@ class Player(Insertable, Loadable, UniqueId):
 
 @dataclass
 class Round(Insertable, Loadable, UniqueId):
-    round_id: Optional[int] = field(default=None)
+    round_id: int = field(default=None)
     start_time: Optional[datetime] = field(default=None)
     end_time: Optional[datetime] = field(default=None)
     participants: Optional[int] = field(default=None)
@@ -50,7 +50,7 @@ class Round(Insertable, Loadable, UniqueId):
 
     @property
     def unique_query(self) -> ColumnQuery:
-        return ColumnQuery.from_row(self.table, "round_id", self.round_id)
+        return ColumnQuery.from_row("turn", "round_id", self.round_id)
 
     def as_insert_query(self):
         value, col = ("", "") if self.end_time is None else (f"{self.end_time},", 'end_time,')
@@ -75,7 +75,7 @@ class RoundUpdate(Round):
 
 @dataclass
 class Team(Insertable, Loadable, UniqueId):
-    team_id: Optional[int] = field(default=None)
+    team_id: int = field(default=0)
     name: Optional[str] = field(default=None)
     player_one: Optional[Player] = field(default=None)
     player_two: Optional[Player] = field(default=None)
@@ -126,9 +126,9 @@ class Team(Insertable, Loadable, UniqueId):
 
 @dataclass
 class Result(Insertable, Loadable, UniqueId):
-    result_id: Optional[int] = field(default=None)
+    result_id: int = field(default=0)
     team: Optional[Team] = field(default=None)
-    points: Optional[int] = field(default=None)
+    points: Optional[int] = field(default=0)
     delta: float = field(default=0)
 
     def __hash__(self):
@@ -144,9 +144,8 @@ class Result(Insertable, Loadable, UniqueId):
     
     @staticmethod
     def elo_for_team(team: Team) -> ColumnQuery:
-        query = ColumnQuery(QueryKind.SELECT, self.table,
-            [Sum(f"{self.table}.delta")],
-            Where(Eq("team", team.team_id))    
+        return ColumnQuery(QueryKind.SELECT, "result", [Sum(f"delta")],
+                Where(Eq("team_id", team.team_id))    
         )
     
     @property

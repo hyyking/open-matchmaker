@@ -24,7 +24,7 @@ if __name__ == "__main__":
     
     if getattr(ARGS, "generate"):
         generate(Database("tests/full_mockdb.sqlite3"))
-    else:
-        for test in ARGS.tests:
-            GROUPS.collect(test)
-        GROUPS.run(ARGS.verbosity)
+    
+    for test in ARGS.tests:
+        GROUPS.collect(test)
+    GROUPS.run(ARGS.verbosity)

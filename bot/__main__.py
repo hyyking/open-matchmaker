@@ -89,4 +89,11 @@ if __name__ == "__main__":
 
     PlayerCog(bot)
     AdminCog(bot)
-    bot.run(os.getenv("DISCORD_TOKEN"))
+    
+    token = os.getenv("DISCORD_TOKEN")
+    if token is not None:
+        bot.run(token)
+        sys.exit(0)
+    else:
+        logger.error("environment variable DISCORD_TOKEN is not set")
+        sys.exit(1)

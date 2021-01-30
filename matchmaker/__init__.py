@@ -23,7 +23,7 @@ class Database:
         if log_handler:
             self.logger.addHandler(log_handler)
         self.logger.info(f"Successfully connected to database file '{path}'")
-        self.last_err: Dict[str, Any] = None
+        self.last_err: Optional[Dict[str, Any]] = None
 
     def __del__(self):
         self.__conn.commit()

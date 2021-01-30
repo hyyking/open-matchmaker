@@ -1,12 +1,13 @@
 import logging
+from typing import Optional
 
 from discord.ext import commands
 
-from matchmaker.tables import Player, Team
+from matchmaker.tables import Player, Team, Result
 from matchmaker.template import ColumnQuery, QueryKind, Eq, And, Or, Where, InnerJoin, Alias
 
 
-class ToPlayer(commands.MemberConverter):
+class ToPlayer(Player, commands.MemberConverter):
     async def convert(self, ctx, argument):
         member = await super().convert(ctx, argument)
         return Player(member.id, member.name)
@@ -55,7 +56,7 @@ class PlayerCog(commands.Cog):
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
-            assert self.bot.db.insert(Team(None, team, current, teammate))
+            assert self.bot.db.insert(Team(0, team, current, teammate))
             message = self.bot.fmtok(
                 f"registered {current.name}'s and {teammate.name}'s team {team}"
             )
@@ -126,11 +127,11 @@ class PlayerCog(commands.Cog):
         await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
-    async def teams(self, ctx, who: ToPlayer = None):
+    async def teams(self, ctx, who: Optional[ToPlayer] = None):
         current = Player(ctx.message.author.id, ctx.message.author.name)
         if who is not None:
             current = who
-
+        
         query = ColumnQuery(QueryKind.SELECT, "team",
             ["team.team_id", "team.name", "p1.discord_id", "p1.name", "p2.discord_id","p2.name"],
             [
@@ -152,5 +153,13 @@ class PlayerCog(commands.Cog):
                 elo=self.bot.mm.config.base_elo 
             )
         teams = map(to_team, self.bot.db.execute(query, "FetchPlayerTeams").fetchall())
+        content = ""
         for team in teams:
-            a = self.bot.db.execute(Result.elo_for_team(team)).fetchone()[0]
+            delta = self.bot.db.execute(
+                Result.elo_for_team(team), "FetchTeamElo").fetchone()[0]
+            team.elo += delta if delta is not None else 0
+            content += f"{team.team_id} | {team.name}({team.elo}): {team.player_one.name} \
+& {team.player_two.name}\n"
+        
+        message = f"```{content}```"
+        await ctx.message.channel.send(content=message, reference=ctx.message)

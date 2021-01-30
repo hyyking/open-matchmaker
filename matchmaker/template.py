@@ -3,10 +3,13 @@ from typing import Any, List, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
+
 class AsStatement(abc.ABC):
     @abc.abstractmethod
     def render(self):
         raise NotImplementedError
+
+Statement = Union[str, int, AsStatement]
 
 class QueryKind(Enum):
     SELECT = 1
@@ -15,8 +18,8 @@ class QueryKind(Enum):
 
 @dataclass
 class WithOperand(AsStatement):
-    operand_1: Any
-    operand_2: Any 
+    operand_1: Statement
+    operand_2: Statement
     operation: str = field(default="")
     wrap: bool = field(default=False)
 
@@ -58,14 +61,16 @@ class Values(AsStatement, tuple):
 
 @dataclass
 class Sum(AsStatement):
-    header: str
+    header: Statement
     def render(self):
-        return f"SUM({self.header})"
+        h = self.header
+        header = h.render() if isinstance(h, AsStatement) else h 
+        return f"SUM({header})"
 
 @dataclass
 class InnerJoin(AsStatement):
-    table: Union[str, AsStatement]
-    on: Optional[AsStatement] = None
+    table: Statement 
+    on: Optional[Statement] = None
     def render(self):
         table = self.table.render() if isinstance(self.table, AsStatement) else self.table
         if self.on is None:
@@ -104,7 +109,7 @@ SELECT EXISTS(
 class ColumnQuery(AsStatement):
     kind: Optional[QueryKind]
     table: str
-    headers: List[str]
+    headers: List[Statement]
     statement: Union[AsStatement, List[AsStatement]]
 
     def __repr__(self):
