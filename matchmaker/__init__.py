@@ -2,7 +2,7 @@ import sqlite3 as sql
 import logging
 from typing import Any, Optional, Dict
 
-from .operations import Insertable, Loadable, UniqueId
+from .operations import Table, Insertable, Loadable
 from .template import ColumnQuery, QueryKind
 
 __all__ = ("Database", "tables", "mm", "template")
@@ -52,9 +52,9 @@ class Database:
             self.logger.error(QUERYERROR.format(**context))
             return None
 
-    def exists_unique(self, query: UniqueId) -> bool:
+    def exists_unique(self, query: Table) -> bool:
         """ check existance of a value in database """
-        uq: ColumnQuery = query.unique_query
+        uq: ColumnQuery = query.primary_key_query()
         uq.kind = QueryKind.EXISTS
         return self.exists(uq, "ExistUniqueQuery")
     

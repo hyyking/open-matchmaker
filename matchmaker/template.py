@@ -12,6 +12,7 @@ class AsStatement(abc.ABC):
 Statement = Union[str, int, AsStatement]
 
 class QueryKind(Enum):
+    NONE = 0
     SELECT = 1
     EXISTS = 2
     INSERT = 3
@@ -20,7 +21,7 @@ class QueryKind(Enum):
 class WithOperand(AsStatement):
     operand_1: Statement
     operand_2: Statement
-    operation: str = field(default="")
+    operation: str = field(init=False)
     wrap: bool = field(default=False)
 
     def render(self):
@@ -86,9 +87,11 @@ class Alias(AsStatement):
 
 @dataclass
 class Where(AsStatement):
-    conditions: AsStatement
+    conditions: Statement
     def render(self):
-        return f"WHERE {self.conditions.render()}\n"
+        c = self.conditions
+        conditions = c.render() if isinstance(c, AsStatement) else c
+        return f"WHERE {conditions}\n"
 
 
 SELECT = """
@@ -107,7 +110,7 @@ SELECT EXISTS(
 
 @dataclass(repr=False)
 class ColumnQuery(AsStatement):
-    kind: Optional[QueryKind]
+    kind: QueryKind
     table: str
     headers: List[Statement]
     statement: Union[AsStatement, List[AsStatement]]
@@ -124,7 +127,7 @@ class ColumnQuery(AsStatement):
         return f"{name}({self.table})"
 
     @classmethod
-    def from_row(cls, table: str, key: str, value: Any, kind: QueryKind = None):
+    def eq_row(cls, table: str, key: str, value: Any, kind: QueryKind = QueryKind.NONE):
         return cls(kind, table, [key], Where(Eq(key, value)))
 
     def join_headers(self) -> str:
@@ -145,7 +148,9 @@ class ColumnQuery(AsStatement):
             "table": self.table,
             "statements": self.render_statements()
         }
-        if self.kind is QueryKind.SELECT:
+        if self.kind is QueryKind.NONE:
+            raise ValueError("QueryKind has not been specified")
+        elif self.kind is QueryKind.SELECT:
             return SELECT.format(**context)
         elif self.kind is QueryKind.EXISTS:
             del context["headers"]
@@ -154,4 +159,4 @@ class ColumnQuery(AsStatement):
             assert isinstance(self.statement, Values)
             return "INSERT INTO {table}({headers}) VALUES {statements}".format(**context)
         else:
-            raise NotImplementedError("Missing QueryKind {self.kind}")
+            raise NotImplementedError(f"Missing QueryKind {self.kind}")

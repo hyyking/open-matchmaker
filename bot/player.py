@@ -7,7 +7,7 @@ from matchmaker.tables import Player, Team, Result
 from matchmaker.template import ColumnQuery, QueryKind, Eq, And, Or, Where, InnerJoin, Alias
 
 
-class ToPlayer(Player, commands.MemberConverter):
+class ToPlayer(commands.MemberConverter, Player):
     async def convert(self, ctx, argument):
         member = await super().convert(ctx, argument)
         return Player(member.id, member.name)
@@ -32,7 +32,7 @@ class PlayerCog(commands.Cog):
         if not self.bot.db.exists_unique(teammate):
             assert self.bot.db.insert(teammate)
         
-        query = ColumnQuery.from_row("team", "name", team, kind=QueryKind.EXISTS)
+        query = ColumnQuery.eq_row("team", "name", team, kind=QueryKind.EXISTS)
         if self.bot.db.exists(query, "RegisterDuplicateTeamName"):
             message = self.bot.fmterr(f"'{team}' is already present use a different name!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
@@ -67,7 +67,7 @@ class PlayerCog(commands.Cog):
         current = Player(ctx.message.author.id, ctx.message.author.name)
         mmctx = self.bot.mm.context
 
-        query = ColumnQuery.from_row("team", "name", team_name, kind=QueryKind.EXISTS)
+        query = ColumnQuery.eq_row("team", "name", team_name, kind=QueryKind.EXISTS)
         if not self.bot.db.exists(query, "AddTeamExists"):
             message = self.bot.fmterr(f"'{team_name}' is not a valid team name!")
             await ctx.message.channel.send(content=message, reference=ctx.message)

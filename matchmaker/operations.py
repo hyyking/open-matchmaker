@@ -12,13 +12,23 @@ class Insertable(abc.ABC):
     def as_insert_query(self):
         raise NotImplementedError
 
-class UniqueId(abc.ABC):
-    @abc.abstractproperty
-    def unique_query(self) -> ColumnQuery:
-        raise NotImplementedError
+class Table(abc.ABC):
     @property
-    def table(self):
+    def table(self) -> str:
         return type(self).__name__.lower()
+    
+    @property
+    def primary_key(self) -> str:
+        return type(self).__name__.lower() + "_id"
+    
+    def primary_key_query(self) -> ColumnQuery:
+        return ColumnQuery.eq_row(
+            self.table,
+            self.primary_key,
+            getattr(self, self.primary_key)
+        )
+
+
 
 class Loadable(abc.ABC):
     @abc.abstractclassmethod

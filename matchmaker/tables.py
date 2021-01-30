@@ -4,29 +4,29 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-from .operations import Insertable, Loadable, UniqueId
+from .operations import Table, Insertable, Loadable
 from .template import ColumnQuery, QueryKind, Values, Sum, Where, Eq
 
 from matchmaker import Database
 
 
-__all__ = ("Player", "Team", "Round", "RoundUpdate", "Match", "Result")
+__all__ = ("Player", "Team", "Round", "Match", "Result")
 
 @dataclass
-class Player(Insertable, Loadable, UniqueId):
+class Player(Table, Insertable, Loadable):
     discord_id: int = field(default=0)
     name: Optional[str] = field(default=None)
 
     def __hash__(self):
         return hash(self.discord_id)
+    
+    @property
+    def primary_key(self) -> str:
+        return "discord_id"
 
     @classmethod
     def load_from(cls, conn: Database, rhs) -> "Player":
         raise NotImplementedError
-    
-    @property
-    def unique_query(self) -> ColumnQuery:
-        return ColumnQuery.from_row("player", "discord_id", self.discord_id)
     
     def as_insert_query(self):
         return ColumnQuery(QueryKind.INSERT, "player",
@@ -35,25 +35,24 @@ class Player(Insertable, Loadable, UniqueId):
         )
 
 @dataclass
-class Round(Insertable, Loadable, UniqueId):
-    round_id: int = field(default=None)
+class Round(Table, Insertable, Loadable):
+    round_id: int = field(default=0)
     start_time: Optional[datetime] = field(default=None)
     end_time: Optional[datetime] = field(default=None)
     participants: Optional[int] = field(default=None)
     
     def __hash__(self):
         return hash(self.round_id)
+    
+    @property
+    def table(self) -> str:
+        return "turn"
 
     @classmethod
     def load_from(cls, conn: Database, round_id: int) -> "Round":
         raise NotImplementedError
 
-    @property
-    def unique_query(self) -> ColumnQuery:
-        return ColumnQuery.from_row("turn", "round_id", self.round_id)
-
     def as_insert_query(self):
-        value, col = ("", "") if self.end_time is None else (f"{self.end_time},", 'end_time,')
         headers = ["start_time", "participants"]
         start_time = f"{self.start_time:%Y-%m-%d %H:%M:%S}"
         values = Values((start_time, self.participants))
@@ -64,17 +63,7 @@ class Round(Insertable, Loadable, UniqueId):
         return ColumnQuery(QueryKind.INSERT, "turn", headers, values)
 
 @dataclass
-class RoundUpdate(Round):
-    def as_insert_query(self):
-        assert self.end_time is not None
-        return f"""
-            UPDATE turn
-            SET end_time = {self.end_time}
-            WHERE round_id = {self.round_id};
-        """
-
-@dataclass
-class Team(Insertable, Loadable, UniqueId):
+class Team(Table, Insertable, Loadable):
     team_id: int = field(default=0)
     name: Optional[str] = field(default=None)
     player_one: Optional[Player] = field(default=None)
@@ -114,10 +103,6 @@ class Team(Insertable, Loadable, UniqueId):
         )
         return team
 
-    @property
-    def unique_query(self) -> ColumnQuery:
-        return ColumnQuery.from_row(self.table, "team_id", self.team_id)
- 
     def as_insert_query(self):
         return ColumnQuery(QueryKind.INSERT, self.table,
             ["name", "player_one", "player_two"],
@@ -125,7 +110,7 @@ class Team(Insertable, Loadable, UniqueId):
         )
 
 @dataclass
-class Result(Insertable, Loadable, UniqueId):
+class Result(Table, Insertable, Loadable):
     result_id: int = field(default=0)
     team: Optional[Team] = field(default=None)
     points: Optional[int] = field(default=0)
@@ -145,12 +130,8 @@ class Result(Insertable, Loadable, UniqueId):
     @staticmethod
     def elo_for_team(team: Team) -> ColumnQuery:
         return ColumnQuery(QueryKind.SELECT, "result", [Sum(f"delta")],
-                Where(Eq("team_id", team.team_id))    
+                Where(Eq("team_id", team.team_id))
         )
-    
-    @property
-    def unique_query(self) -> ColumnQuery:
-        return ColumnQuery.from_row(self.table, "result_id", self.result_id)
     
     def as_insert_query(self):
         return ColumnQuery(QueryKind.INSERT, self.table,
@@ -159,7 +140,7 @@ class Result(Insertable, Loadable, UniqueId):
         )
 
 @dataclass
-class Match(Insertable, Loadable, UniqueId):
+class Match(Table, Insertable, Loadable):
     match_id: Optional[int] = field(default=None)
     round: Optional[Round] = field(default=None)
     team_one: Optional[Result] = field(default=None)
@@ -172,11 +153,7 @@ class Match(Insertable, Loadable, UniqueId):
     @classmethod
     def load_from(cls, conn: Database, rhs):
         raise NotImplementedError
-
-    @property
-    def unique_query(self) -> ColumnQuery:
-        return ColumnQuery.from_row(self.table, "match_id", self.match_id)
-
+    
     def as_insert_query(self):
         return ColumnQuery(QueryKind.INSERT, self.table,
             ["round_id", "result_one", "result_two", "odds_ratio"],
