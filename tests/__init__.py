@@ -35,6 +35,6 @@ class UTGroup:
                     self.collect(sub, f"{prefix}::{utkey}")
 
 GROUPS = UTGroup({
-        "all": ["queries"],
-        "queries": ["SelectQueries", "SpecializedQueries", "LoadQueries", "ExistsQueries"],
+    "all": ["queries"],
+    "queries": ["SelectQueries", "SpecializedQueries", "LoadQueries", "ExistsQueries"],
 })

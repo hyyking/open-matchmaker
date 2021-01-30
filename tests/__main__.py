@@ -20,11 +20,15 @@ def parser():
     return parser
 
 if __name__ == "__main__":
-    ARGS = parser().parse_args()
+    def main(args):
+        if args.generate:
+            generate(Database("tests/full_mockdb.sqlite3"))
+        
+        if "NO_RUN" in args.tests:
+            return
+
+        for test in args.tests:
+            GROUPS.collect(test)
+        GROUPS.run(args.verbosity)
     
-    if getattr(ARGS, "generate"):
-        generate(Database("tests/full_mockdb.sqlite3"))
-    
-    for test in ARGS.tests:
-        GROUPS.collect(test)
-    GROUPS.run(ARGS.verbosity)
+    main(parser().parse_args())
