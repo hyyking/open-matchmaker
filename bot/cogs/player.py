@@ -6,6 +6,9 @@ from discord.ext import commands
 from matchmaker.tables import Player, Team, Result
 from matchmaker.template import ColumnQuery, QueryKind, Eq, And, Or, Where, InnerJoin, Alias
 
+from .ctx import BotContext
+
+__all__ = ("PlayerCog")
 
 class ToPlayer(commands.MemberConverter, Player):
     async def convert(self, ctx, argument):
@@ -13,28 +16,28 @@ class ToPlayer(commands.MemberConverter, Player):
         return Player(member.id, member.name)
 
 
-class PlayerCog(commands.Cog):
-    def __init__(self, bot, *args, **kwargs):
-        super(PlayerCog, self).__init__(*args, **kwargs)
-        bot.add_cog(self)
-        self.bot = bot
-    
+class PlayerCog(commands.Cog, BotContext):
+    def __repr__(self):
+        assert self.is_init()
+        return f"{self.__bot}, {self.__mm}, {self.__db}"
+
     @commands.command()
-    async def register(self, ctx, teammate: ToPlayer, *, team: str):
+    async def register(self, ctx, teammate: ToPlayer, *, team_name: str):
         current = Player(ctx.message.author.id, ctx.message.author.name)
         if current.discord_id == teammate.discord_id:
             message = self.bot.fmterr(f"{current.name} you can't play with yourself!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        if not self.bot.db.exists_unique(current):
-            assert self.bot.db.insert(current)
-        if not self.bot.db.exists_unique(teammate):
-            assert self.bot.db.insert(teammate)
+        if not self.db.exists_unique(current):
+            assert self.db.insert(current)
+        if not self.db.exists_unique(teammate):
+            assert self.db.insert(teammate)
         
-        query = ColumnQuery.eq_row("team", "name", team, kind=QueryKind.EXISTS)
-        if self.bot.db.exists(query, "RegisterDuplicateTeamName"):
-            message = self.bot.fmterr(f"'{team}' is already present use a different name!")
+        query = ColumnQuery.eq_row("team", "name", team_name, kind=QueryKind.EXISTS)
+        if self.db.exists(query, "RegisterDuplicateTeamName"):
+            message = f"'{team_name}' is already present, use a different name!"
+            message = self.bot.fmterr(message)
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
@@ -48,15 +51,17 @@ class PlayerCog(commands.Cog):
                 Eq("player_two", current.discord_id)
             )
         )))
-        if self.bot.db.exists(query, "RegisterTeamExists"):
+        if self.db.exists(query, "RegisterTeamExists"):
             query.kind = QueryKind.SELECT
-            team = self.bot.db.execute(query, "RegisterFetchTeamName").fetchone()[0]
+            cursor = self.db.execute(query, "RegisterFetchTeamName")
+            assert cursor is not None
+            team: str = cursor.fetchone()[0]
             message = self.bot.fmterr(
                 f"'{current.name}' is already in a team with '{teammate.name}' ('{team}')!"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
-            assert self.bot.db.insert(Team(0, team, current, teammate))
+            assert self.db.insert(Team(0, team, current, teammate))
             message = self.bot.fmtok(
                 f"registered {current.name}'s and {teammate.name}'s team {team}"
             )
@@ -68,12 +73,12 @@ class PlayerCog(commands.Cog):
         mmctx = self.bot.mm.context
 
         query = ColumnQuery.eq_row("team", "name", team_name, kind=QueryKind.EXISTS)
-        if not self.bot.db.exists(query, "AddTeamExists"):
+        if not self.db.exists(query, "AddTeamExists"):
             message = self.bot.fmterr(f"'{team_name}' is not a valid team name!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        team = self.bot.db.load(Team(name=team_name, elo=self.bot.mm.config.base_elo))
+        team = self.db.load(Team(name=team_name, elo=self.bot.mm.config.base_elo))
         assert team is not None
         assert team.player_one is not None
 
@@ -96,7 +101,7 @@ class PlayerCog(commands.Cog):
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
             mmctx.queue_team(team)
-            message = self.bot.fmtok(f"""queued {team.name}""")
+            message = self.bot.fmtok(f"""queued {team.name}({team.elo})""")
             await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
@@ -152,10 +157,10 @@ class PlayerCog(commands.Cog):
                 player_two=Player(p2id, p2name),
                 elo=self.bot.mm.config.base_elo 
             )
-        teams = map(to_team, self.bot.db.execute(query, "FetchPlayerTeams").fetchall())
+        teams = map(to_team, self.db.execute(query, "FetchPlayerTeams").fetchall())
         content = ""
         for team in teams:
-            delta = self.bot.db.execute(
+            delta = self.db.execute(
                 Result.elo_for_team(team), "FetchTeamElo").fetchone()[0]
             team.elo += delta if delta is not None else 0
             content += f"{team.team_id} | {team.name}({team.elo}): {team.player_one.name} \

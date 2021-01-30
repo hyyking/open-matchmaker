@@ -2,9 +2,9 @@
 
 """ generate pairs for the next turn of the db """
 
+import json, logging
 from dataclasses import dataclass, field
 from typing import List, Dict
-import json
 
 
 from matchmaker import Database, tables
@@ -12,6 +12,8 @@ from matchmaker.context import Context
 
 @dataclass
 class Config:
+    file_path: str
+
     base_elo: int = field(default=1000)
     points_per_match: int = field(default=1)
     k_factor: int = field(default=32)
@@ -20,12 +22,17 @@ class Config:
 
     trigger_threshold: int = field(default=10)
 
+    command_prefix: str = field(default="+")
     ok_prefix: str = field(default=":smile:")
     err_prefix: str = field(default=":weary:")
+    
+    def __post_init__(self):
+        logger = logging.getLogger(__name__)
+        logger.info(f"Loaded config from '{self.file_path}'")
 
     @classmethod
     def from_file(cls, path: str):
-        out = cls() # start from default config
+        out = cls(path) # start from default config
 
         with open(path, "r") as config:
             cfg = json.loads(config.read())

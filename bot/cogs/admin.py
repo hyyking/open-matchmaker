@@ -1,13 +1,13 @@
 import logging
 
+from .ctx import BotContext
+
 from discord.ext import commands
 
-class AdminCog(commands.Cog):
-    def __init__(self, bot, *args, **kwargs):
-        super(AdminCog, self).__init__(*args, **kwargs)
-        bot.add_cog(self)
-        self.mm = bot
 
+__all__ = ("AdminCog")
+
+class AdminCog(commands.Cog, BotContext):
     @commands.command()
     @commands.has_role("tournament_admin")
     async def admin(self, ctx):
