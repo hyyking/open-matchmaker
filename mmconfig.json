@@ -1,15 +1,22 @@
 {
-    "base_elo": 1000,
-    "points_per_match": 7,
-    "k_factor": 16,
+    "bot": {
+	"command_prefix": "+",
+	"err_prefix": ":weary:",
+	"ok_prefix": ":smile:"
+    },
 
-    "trigger_threshold": 10,
+    "matchmaker": {
 
-    "err_prefix": ":weary:",
-    "ok_prefix": ":smile:",
+	"base_elo": 1000,
+	"points_per_match": 7,
+	"k_factor": 16,
 
-    "period": {
-	"active": 3.0,
-	"duty_cycle": 0.2
+	"trigger_threshold": 10,
+
+
+	"period": {
+	    "active": 3.0,
+	    "duty_cycle": 0.2
+	}
     }
 }

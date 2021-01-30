@@ -1,19 +1,25 @@
 import logging
 from typing import List
 
+from .config import Config
+
 from discord.ext import commands
-from matchmaker import Database
-from matchmaker.mm import MatchMaker
+from matchmaker import Database, MatchMaker
 
 __all__ = ("MatchMakerBot")
 
 class MatchMakerBot(commands.Bot):
-    def __init__(self, db: Database, mm: MatchMaker, cogs: List["BotContext"]):
-        super().__init__(command_prefix=mm.config.command_prefix)
+    def __init__(self,
+            config: Config,
+            db: Database,
+            mm: MatchMaker,
+            cogs: List["BotContext"]):
+        super().__init__(command_prefix=config.command_prefix)
 
         self.logger = logging.getLogger(__name__)
         self.db = db
         self.mm = mm
+        self.config = config
         for cog in cogs:
             setattr(cog, "__bot", self)
             setattr(cog, "__db", self.db)
@@ -22,9 +28,9 @@ class MatchMakerBot(commands.Bot):
 
 
     def fmterr(self, err):
-        return f"{self.mm.config.err_prefix} : {err}"
+        return f"{self.config.err_prefix} : {err}"
     def fmtok(self, ok):
-        return f"{self.mm.config.ok_prefix} : {ok}"
+        return f"{self.config.ok_prefix} : {ok}"
     
     async def on_message(self, message):
         is_command = message.content[0] == self.command_prefix

@@ -7,7 +7,7 @@ from typing import Optional, List
 from .operations import Table, Insertable, Loadable
 from .template import ColumnQuery, QueryKind, Values, Sum, Where, Eq
 
-from matchmaker import Database
+from .db import Database
 
 
 __all__ = ("Player", "Team", "Round", "Match", "Result")

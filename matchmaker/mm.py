@@ -2,18 +2,15 @@
 
 """ generate pairs for the next turn of the db """
 
-import json, logging
+import logging
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-
-from matchmaker import Database, tables
-from matchmaker.context import Context
+from .db import Database
+from .context import Context
 
 @dataclass
 class Config:
-    file_path: str
-
     base_elo: int = field(default=1000)
     points_per_match: int = field(default=1)
     k_factor: int = field(default=32)
@@ -21,31 +18,11 @@ class Config:
     period: Dict[str, float] = field(default_factory=dict)
 
     trigger_threshold: int = field(default=10)
-
-    command_prefix: str = field(default="+")
-    ok_prefix: str = field(default=":smile:")
-    err_prefix: str = field(default=":weary:")
-    
-    def __post_init__(self):
-        logger = logging.getLogger(__name__)
-        logger.info(f"Loaded config from '{self.file_path}'")
-
-    @classmethod
-    def from_file(cls, path: str):
-        out = cls(path) # start from default config
-
-        with open(path, "r") as config:
-            cfg = json.loads(config.read())
-
-        for key, value in cfg.items():
-            if not hasattr(out, key):
-                raise KeyError(key)
-            setattr(out, key, value)
-        return out
-
+ 
 
 class MatchMaker:
     def __init__(self, config: Config, database: Database):
+        self.logger = logging.getLogger(__name__)
         self.database: Database = database
         self.config: Config = config
         self.context: Context = Context()

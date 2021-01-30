@@ -8,13 +8,14 @@
 2. Set token environment variable (`export DISCORD_TOKEN = ?`)
 3. Run with `make run`
 
+
+## Configuration
+
 ## System
 
-> [french article](project/PROJECT.md)
+> description article in [french](project/PROJECT.md)
 
-The system is based around an elo model with a seasonal parameter. Model constants
-are found in the `matchmaking/matchmaking.py` file.
-
+The system is based around an elo model with a seasonal parameter.
 Summary:
 
 ```

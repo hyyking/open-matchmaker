@@ -78,7 +78,7 @@ class PlayerCog(commands.Cog, BotContext):
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        team = self.db.load(Team(name=team_name, elo=self.bot.mm.config.base_elo))
+        team = self.db.load(Team(name=team_name, elo=self.mm.config.base_elo))
         assert team is not None
         assert team.player_one is not None
 
@@ -126,7 +126,7 @@ class PlayerCog(commands.Cog, BotContext):
     async def who(self, ctx):
         mmctx = self.bot.mm.context
         queue = list(map(lambda t: f"{t.name}({t.elo})", mmctx.queue))
-        threshold = self.bot.mm.config.trigger_threshold
+        threshold = self.mm.config.trigger_threshold
         message = f"""```[{len(queue)} / {threshold}]
 {", ".join(queue)}```"""
         await ctx.message.channel.send(content=message, reference=ctx.message)

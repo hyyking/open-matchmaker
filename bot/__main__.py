@@ -2,7 +2,7 @@ import os, sys, logging, argparse, logging
 
 from . import cogs
 
-from bot import MatchMakerBot
+from bot import MatchMakerBot, config as cfg
 from matchmaker import Database, mm
 
 
@@ -56,8 +56,9 @@ if __name__ == "__main__":
         logger = log("matchmaker.log", loglevel)
         
         db = Database(database)
-        config = mm.Config.from_file(config)
-        bot = MatchMakerBot(db, mm.MatchMaker(config, db), [
+
+        botcfg, mmcfg = cfg.from_file(config)
+        bot = MatchMakerBot(botcfg, db, mm.MatchMaker(mmcfg, db), [
             cogs.PlayerCog(),
             cogs.AdminCog()
         ])
