@@ -37,6 +37,9 @@ class MatchMakerBot(commands.Bot):
         self.logger.debug(f"{ctx.message.author}: {self.command_prefix}{command}")
 
     async def on_command_error(self, ctx, err):
+        if isinstance(err, commands.errors.MissingRequiredArgument):
+            message = self.fmterr(err)
+            await ctx.message.channel.send(content=message, reference=ctx.message)
         self.logger.error(err)
 
 
@@ -82,9 +85,8 @@ if __name__ == "__main__":
     stream_log.setFormatter(formatter)
     
     db = Database(getattr(parsed, "database"), log_handler=stream_log, log_level=level)
-    mm = mm.MatchMaker(config, db)
+    bot = MatchMakerBot(db, mm.MatchMaker(config, db), command_prefix = "+")
 
-    bot = MatchMakerBot(db, mm, command_prefix = "+")
     PlayerCog(bot)
     AdminCog(bot)
     bot.run(os.getenv("DISCORD_TOKEN"))

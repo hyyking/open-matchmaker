@@ -1,9 +1,10 @@
 
 import abc
-import sqlite3 as sql
 from .template import ColumnQuery
 
 __all__ = ("Insertable", "UniqueId", "Loadable")
+
+
 
 
 class Insertable(abc.ABC):
@@ -21,6 +22,6 @@ class UniqueId(abc.ABC):
 
 class Loadable(abc.ABC):
     @abc.abstractclassmethod
-    def load_from(cls, conn: sql.Cursor, rhs):
+    def load_from(cls, conn, rhs):
         raise NotImplementedError
 

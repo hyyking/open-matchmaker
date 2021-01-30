@@ -1,5 +1,6 @@
 import sqlite3 as sql
 import logging
+from typing import Any, Optional, Dict
 
 from .operations import Insertable, Loadable, UniqueId
 from .template import ColumnQuery, QueryKind
@@ -22,6 +23,7 @@ class Database:
         if log_handler:
             self.logger.addHandler(log_handler)
         self.logger.info(f"Successfully connected to database file '{path}'")
+        self.last_err: Dict[str, Any] = None
 
     def __del__(self):
         self.__conn.commit()
@@ -32,14 +34,12 @@ class Database:
         return self.__conn.cursor()
     
     def insert(self, query: Insertable) -> bool:
-        """ insert to the database, returns True on error """
-        assert isinstance(query, Insertable)
-        return self.execute(query.as_insert_query(), "Insert") is None
+        """ insert to the database, returns False on failure """
+        return self.execute(query.as_insert_query(), "InsertQuery") is not None
 
-    def load(self, query: Loadable) -> Loadable:
-        assert isinstance(query, Loadable)
+    def load(self, query: Loadable) -> Optional[Loadable]:
         try: 
-            l = type(query).load_from(self, query)
+            l: Loadable = type(query).load_from(self, query) # type: ignore
             self.logger.debug(f"Executed load query for {query}")
             return l
         except Exception as err:
@@ -54,16 +54,17 @@ class Database:
 
     def exists_unique(self, query: UniqueId) -> bool:
         """ check existance of a value in database """
-        assert isinstance(query, UniqueId)
-        query = query.unique_query
-        query.kind = QueryKind.EXISTS
-        return self.exists(query, "ExistUnique")
+        uq: ColumnQuery = query.unique_query
+        uq.kind = QueryKind.EXISTS
+        return self.exists(uq, "ExistUniqueQuery")
     
-    def exists(self, query: ColumnQuery, title=""):
+    def exists(self, query: ColumnQuery, title: str) -> bool:
         assert query.kind == QueryKind.EXISTS
-        return self.execute(query, title).fetchone()[0] == 1
+        q = self.execute(query, title)
+        assert q is not None
+        return q.fetchone()[0] == 1
 
-    def execute(self, query: ColumnQuery, title=""):
+    def execute(self, query: ColumnQuery, title: str) -> Optional[sql.Cursor]:
         try: 
             q = self.conn.execute(query.render())
             self.logger.debug(f"Executed {title} query for {query}")
@@ -76,6 +77,8 @@ class Database:
                 "exception": err
             }
             self.logger.error(QUERYERROR.format(**context))
+            del context["query"]
+            self.last_err = context
             return None
 
     def summarize(self):

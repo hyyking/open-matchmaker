@@ -1,10 +1,10 @@
-from typing import Set, List
+from typing import Set, List, Optional
 import logging
 
 from matchmaker.tables import Player, Team
 
 class Context:
-    players: Set[Player]
+    players: Set[Optional[Player]]
     teams: List[Team]
 
     def __init__(self):
@@ -17,11 +17,12 @@ class Context:
     def has_player(self, player: Player) -> bool:
         return player in self.players
     
-    def get_team_of_player(self, player: Player) -> Team:
+    def get_team_of_player(self, player: Player) -> Optional[Team]:
         assert player in self.players
         for team in self.queue:
             if team.has_player(player):
                 return team
+        return None
 
     def queue_team(self, team: Team):
         self.players.add(team.player_one)

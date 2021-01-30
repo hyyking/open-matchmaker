@@ -1,7 +1,6 @@
 """ Database tables representation """
 
 from datetime import datetime
-import sqlite3 as sql
 from dataclasses import dataclass, field
 from typing import Optional, List
 
@@ -22,11 +21,11 @@ class Player(Insertable, Loadable, UniqueId):
         return hash(self.discord_id)
 
     @classmethod
-    def load_from(cls, conn: sql.Cursor, discord_id: int):
+    def load_from(cls, conn: Database, rhs) -> "Player":
         raise NotImplementedError
     
     @property
-    def unique_query(self):
+    def unique_query(self) -> ColumnQuery:
         return ColumnQuery.from_row("player", "discord_id", self.discord_id)
     
     def as_insert_query(self):
@@ -46,22 +45,23 @@ class Round(Insertable, Loadable, UniqueId):
         return hash(self.round_id)
 
     @classmethod
-    def load_from(cls, conn: sql.Cursor, round_id: int):
+    def load_from(cls, conn: Database, round_id: int) -> "Round":
         raise NotImplementedError
 
     @property
-    def unique_query(self):
+    def unique_query(self) -> ColumnQuery:
         return ColumnQuery.from_row(self.table, "round_id", self.round_id)
 
     def as_insert_query(self):
         value, col = ("", "") if self.end_time is None else (f"{self.end_time},", 'end_time,')
-        return f"""INSERT INTO {self.table}(start_time, {col} participants)
-VALUES (
-                {self.start_time},
-                {value}
-                {self.participants}
-            )
-        """
+        headers = ["start_time", "participants"]
+        start_time = f"{self.start_time:%Y-%m-%d %H:%M:%S}"
+        values = Values((start_time, self.participants))
+        if self.end_time is not None:
+            headers.append("end_time")
+            end_time = f"{self.end_time:%Y-%m-%d %H:%M:%S}"
+            values = Values((start_time, self.participants, end_time))
+        return ColumnQuery(QueryKind.INSERT, "turn", headers, values)
 
 @dataclass
 class RoundUpdate(Round):
@@ -80,7 +80,7 @@ class Team(Insertable, Loadable, UniqueId):
     player_one: Optional[Player] = field(default=None)
     player_two: Optional[Player] = field(default=None)
     
-    elo: Optional[float] = field(default=None)
+    elo: float = field(default=0)
 
     def __eq__(self, other):
         return self.code == other.code
@@ -91,11 +91,11 @@ class Team(Insertable, Loadable, UniqueId):
     def absorb_result(self, result: "Result"):
         self.elo += result.delta
 
-    def has_player(self, player: Player):
+    def has_player(self, player: Player) -> bool:
         return self.player_one == player or self.player_two == player
 
     @classmethod 
-    def load_from(cls, db: Database, rhs):
+    def load_from(cls, db: Database, rhs) -> "Team":
         query = f"""
             SELECT team.team_id, p1.name, p1.discord_id, p2.name, p2.discord_id
             FROM team
@@ -115,11 +115,11 @@ class Team(Insertable, Loadable, UniqueId):
         return team
 
     @property
-    def unique_query(self):
-        return ColumnQuery.from_row("team", "team_id", self.team_id)
+    def unique_query(self) -> ColumnQuery:
+        return ColumnQuery.from_row(self.table, "team_id", self.team_id)
  
     def as_insert_query(self):
-        return ColumnQuery(QueryKind.INSERT, "team",
+        return ColumnQuery(QueryKind.INSERT, self.table,
             ["name", "player_one", "player_two"],
             Values((self.name, self.player_one.discord_id, self.player_two.discord_id))
         )
@@ -129,7 +129,7 @@ class Result(Insertable, Loadable, UniqueId):
     result_id: Optional[int] = field(default=None)
     team: Optional[Team] = field(default=None)
     points: Optional[int] = field(default=None)
-    delta: Optional[float] = field(default=None)
+    delta: float = field(default=0)
 
     def __hash__(self):
         return hash(self.result_id)
@@ -139,22 +139,25 @@ class Result(Insertable, Loadable, UniqueId):
         return Result(self.team, self.points + other.points, self.delta + other.delta)
     
     @classmethod
-    def load_from(cls, conn: sql.Cursor):
+    def load_from(cls, conn: Database, rhs):
         raise NotImplementedError
     
+    @staticmethod
+    def elo_for_team(team: Team) -> ColumnQuery:
+        query = ColumnQuery(QueryKind.SELECT, self.table,
+            [Sum(f"{self.table}.delta")],
+            Where(Eq("team", team.team_id))    
+        )
+    
     @property
-    def unique_query(self):
-        return ColumnQuery.from_row("result", "result_id", self.result_id)
+    def unique_query(self) -> ColumnQuery:
+        return ColumnQuery.from_row(self.table, "result_id", self.result_id)
     
     def as_insert_query(self):
-        return f"""
-            INSERT INTO {self.table}(team_id, points, delta) 
-            VALUES (
-                {self.team.team_id},
-                {self.points},
-                {self.delta}
-            )
-        """
+        return ColumnQuery(QueryKind.INSERT, self.table,
+            ["team_id", "points", "delta"],
+            Values((self.team.team_id, self.points, self.delta))
+        )
 
 @dataclass
 class Match(Insertable, Loadable, UniqueId):
@@ -162,26 +165,26 @@ class Match(Insertable, Loadable, UniqueId):
     round: Optional[Round] = field(default=None)
     team_one: Optional[Result] = field(default=None)
     team_two: Optional[Result] = field(default=None)
-    odds_ratio: Optional[float] = field(default=None)
+    odds_ratio: float = field(default=1)
     
     def __hash__(self):
         return hash(self.match_id)
 
     @classmethod
-    def load_from(cls, conn: sql.Cursor, match_id: int):
+    def load_from(cls, conn: Database, rhs):
         raise NotImplementedError
 
     @property
-    def unique_query(self):
-        return ColumnQuery.from_row("match", "match_id", self.match_id)
+    def unique_query(self) -> ColumnQuery:
+        return ColumnQuery.from_row(self.table, "match_id", self.match_id)
 
     def as_insert_query(self):
-        return f"""
-            INSERT INTO {self.table}(round_id, result_one, result_two, odds_ratio)
-            VALUES (
-                {self.round.round_id},
-                {self.team_one.result_id},
-                {self.team_two.result_id},
-                {self.odds_ratio}
-            )
-        """
+        return ColumnQuery(QueryKind.INSERT, self.table,
+            ["round_id", "result_one", "result_two", "odds_ratio"],
+            Values((
+                self.round.round_id,
+                self.team_one.result_id,
+                self.team_two.result_id,
+                self.odds_ratio
+            ))
+        )

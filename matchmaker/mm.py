@@ -25,23 +25,23 @@ class Config:
 
     @classmethod
     def from_file(cls, path: str):
-        cls = cls() # start from default config
+        out = cls() # start from default config
 
         with open(path, "r") as config:
             cfg = json.loads(config.read())
 
         for key, value in cfg.items():
-            if not hasattr(cls, key):
+            if not hasattr(out, key):
                 raise KeyError(key)
-            setattr(cls, key, value)
-        return cls
+            setattr(out, key, value)
+        return out
 
 
 class MatchMaker:
     def __init__(self, config: Config, database: Database):
-        self.database = database
-        self.config = config
-        self.context = Context()
+        self.database: Database = database
+        self.config: Config = config
+        self.context: Context = Context()
 
 
 #   import itertools as it
