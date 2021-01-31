@@ -11,7 +11,7 @@ TEST = all
 
 .PHONY: run tree test lint clean
 
-run: $(DATABASE)
+run: $(DATABASE) $(CONFIG)
 	@clear
 	@python -m bot --loglevel $(LOG_LEVEL) \
 		       --database $(DATABASE) \
@@ -25,6 +25,9 @@ test: $(MOCK_DB)
 
 %.sqlite3:
 	@sqlite3 $@ < $(SQL)
+
+$(CONFIG):
+	@[[ ! -a $@ ]] && python -m bot --dump_config > $(CONFIG)
 
 tests/full_mockdb.sqlite3:
 	@sqlite3 $@ < $(SQL)

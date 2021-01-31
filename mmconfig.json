@@ -1,20 +1,14 @@
 {
     "bot": {
-	"command_prefix": "+",
-	"err_prefix": ":weary:",
-	"ok_prefix": ":smile:"
+        "command_prefix": "+",
+        "ok_prefix": ":smile:",
+        "err_prefix": ":weary:"
     },
-
     "matchmaker": {
-	"base_elo": 1000,
-	"points_per_match": 7,
-	"k_factor": 16,
-
-	"trigger_threshold": 10,
-
-	"period": {
-	    "active": 3.0,
-	    "duty_cycle": 0.2
-	}
+        "base_elo": 1000,
+        "points_per_match": 1,
+        "k_factor": 32,
+        "period": {},
+        "trigger_threshold": 10
     }
 }

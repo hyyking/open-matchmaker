@@ -1,8 +1,6 @@
-import os, sys, logging, argparse, logging
+import os, sys, logging, argparse, logging, json
 
-from . import cogs
-
-from bot import MatchMakerBot, MatchMaker, Database, config as cfg
+from bot import MatchMakerBot, MatchMaker, Database, config as cfg, cogs
 
 
 def parse() -> argparse.ArgumentParser:
@@ -17,6 +15,11 @@ def parse() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Sets config file"
+    )
+    parser.add_argument(
+        "--dump_config",
+        action="store_true",
+        help="Dumps config to stdout"
     )
     parser.add_argument(
         "--database",
@@ -49,19 +52,25 @@ def log(log_file: str, level: str):
 
     return logging.getLogger(__name__)
 
-def main(loglevel, database, config):
+def main(dump_config: bool, loglevel: str, database: str, config: str):
     logger = log("matchmaker.log", loglevel)
     
-    db = Database(database)
-
     botcfg, mmcfg = cfg.from_file(config) if config is not None else cfg.default()
 
-    bot = MatchMakerBot(botcfg, MatchMaker(mmcfg, db), [
+    if dump_config:
+        cfgmap = {
+            "bot": botcfg.__dict__,
+            "matchmaker": mmcfg.__dict__
+        }
+        print(json.dumps(cfgmap, indent=4))
+        return 0
+
+    
+    bot = MatchMakerBot(botcfg, MatchMaker(mmcfg, Database(database)), [
         cogs.PlayerCog(),
         cogs.AdminCog()
     ])
 
-    
     token = os.getenv("DISCORD_TOKEN")
     if token is None:
         logger.error("environment variable DISCORD_TOKEN is not set")
