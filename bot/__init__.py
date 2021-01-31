@@ -32,7 +32,7 @@ class MatchMakerBot(commands.Bot):
     
     async def on_message(self, message):
         is_command = message.content[0] == self.command_prefix
-        if message.channel.name != "haxball":
+        if message.channel.name != self.config.channel:
             await message.delete()
         await super().on_message(message)
 

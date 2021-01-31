@@ -9,6 +9,7 @@ __all__ = ("BotConfig", "MatchMakerConfig", "from_file", "default")
 @dataclass
 class BotConfig:
     command_prefix: str = field(default="+")
+    channel: str = field(default="haxball")
     ok_prefix: str = field(default=":smile:")
     err_prefix: str = field(default=":weary:")
 

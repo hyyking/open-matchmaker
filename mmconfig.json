@@ -1,6 +1,7 @@
 {
     "bot": {
         "command_prefix": "+",
+        "channel": "haxball",
         "ok_prefix": ":smile:",
         "err_prefix": ":weary:"
     },
