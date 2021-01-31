@@ -3,6 +3,7 @@
 import unittest
 
 from .queries import SelectQueries, SpecializedQueries, LoadQueries, ExistsQueries
+from .event import EventMapTest, QueueEvents, ResultEvents, RoundEvents
 
 class UTGroup:
     """ group unittest using a one dimensionnal tree """
@@ -37,4 +38,5 @@ class UTGroup:
 GROUPS = UTGroup({
     "all": ["queries"],
     "queries": ["SelectQueries", "SpecializedQueries", "LoadQueries", "ExistsQueries"],
+    "event": ["QueueEvents", "ResultEvents", "RoundEvents", "EventMapTest"]
 })

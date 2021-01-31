@@ -105,7 +105,7 @@ class Result(Table, Insertable, Loadable):
     result_id: int = field(default=0)
     team: Optional[Team] = field(default=None)
     points: Optional[int] = field(default=0)
-    delta: float = field(default=0)
+    delta: Optional[float] = field(default=0.0)
 
     def __add__(self, other):
         assert self.team == other.team
@@ -133,7 +133,7 @@ class Match(Table, Insertable, Loadable):
     round: Optional[Round] = field(default=None)
     team_one: Optional[Result] = field(default=None)
     team_two: Optional[Result] = field(default=None)
-    odds_ratio: float = field(default=1)
+    odds_ratio: Optional[float] = field(default=1.0)
      
     @classmethod
     def load_from(cls, conn: Database, rhs):

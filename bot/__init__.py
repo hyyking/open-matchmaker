@@ -40,11 +40,11 @@ class MatchMakerBot(commands.Bot):
         self.logger.info("MatchMaker launched !")
         info = await self.application_info()
         print(f"""|| AppInfo
-    id: {info.id},
-    name: {info.name},
+             id: {info.id},
+           name: {info.name},
+          owner: {info.owner.name} ({info.owner.id})
+         public: {info.bot_public},
     description: {info.name},
-    public: {info.bot_public},
-    owner: {info.owner.name} ({info.owner.id})
 """)
 
     async def on_command_completion(self, ctx):
