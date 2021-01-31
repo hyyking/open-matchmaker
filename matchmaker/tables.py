@@ -69,6 +69,7 @@ class Team(Table, Insertable, Loadable):
         return hash(self.team_id)
     
     def absorb_result(self, result: "Result"):
+        assert result.delta is not None
         self.elo += result.delta
 
     def has_player(self, player: Player) -> bool:

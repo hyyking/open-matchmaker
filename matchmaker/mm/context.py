@@ -4,12 +4,14 @@ import logging
 from matchmaker.tables import Player, Team
 
 class Context:
-    players: Set[Optional[Player]]
+    players: Set[Player]
     teams: List[Team]
+    ingame: List[Team]
 
     def __init__(self):
         self.players = set()
         self.queue = []
+        self.ingame = []
 
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Matchmaker context initalized")
@@ -25,12 +27,16 @@ class Context:
         return None
 
     def queue_team(self, team: Team):
+        assert team.player_one is not None
+        assert team.player_two is not None
         self.players.add(team.player_one)
         self.players.add(team.player_two)
         self.queue.append(team)
         self.logger.info(f"Queued '{team.name}'")
 
     def dequeue_team(self, team: Team) -> bool:
+        assert team.player_one is not None
+        assert team.player_two is not None
         try:
             self.players.remove(team.player_one)
             self.players.remove(team.player_two)

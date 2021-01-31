@@ -12,7 +12,7 @@ class MatchMakerBot(commands.Bot):
     def __init__(self,
             config: BotConfig,
             mm: MatchMaker,
-            cogs: List["BotContext"]):
+            cogs: List[commands.Cog]):
         super().__init__(command_prefix=config.command_prefix)
 
         self.logger = logging.getLogger(__name__)

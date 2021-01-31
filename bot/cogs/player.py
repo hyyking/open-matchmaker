@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, cast
 
 from discord.ext import commands
 
@@ -78,9 +78,15 @@ class PlayerCog(commands.Cog, BotContext):
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        team = self.db.load(Team(name=team_name, elo=self.mm.config.base_elo))
+        team = cast(Optional[Team], self.db.load(
+            Team(name=team_name, elo=self.mm.config.base_elo)))
+        
         assert team is not None
+        assert team.name is not None
         assert team.player_one is not None
+        assert team.player_two is not None
+        assert team.player_one.name is not None
+        assert team.player_two.name is not None
 
         if not team.has_player(current):
             message = self.bot.fmterr(f"You are not part of this team!")
@@ -89,12 +95,14 @@ class PlayerCog(commands.Cog, BotContext):
 
         if mmctx.has_player(team.player_one):
             curr = mmctx.get_team_of_player(team.player_one)
+            assert curr is not None
             message = self.bot.fmterr(
                 f"'{team.player_one.name}' is queuing in team '{curr.name}'!"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         elif mmctx.has_player(team.player_two):
             curr = mmctx.get_team_of_player(team.player_one)
+            assert curr is not None
             message = self.bot.fmterr(
                 f"'{team.player_two.name}' is queuing in team '{curr.name}'!"
             )
@@ -157,11 +165,14 @@ class PlayerCog(commands.Cog, BotContext):
                 player_two=Player(p2id, p2name),
                 elo=self.bot.mm.config.base_elo 
             )
-        teams = map(to_team, self.db.execute(query, "FetchPlayerTeams").fetchall())
+        
+        q = self.db.execute(query, "FetchPlayerTeams")
+        assert q is not None
         content = ""
-        for team in teams:
-            delta = self.db.execute(
-                Result.elo_for_team(team), "FetchTeamElo").fetchone()[0]
+        for team in map(to_team, q.fetchall()):
+            q = self.db.execute(Result.elo_for_team(team), "FetchTeamElo")
+            assert q is not None
+            delta = q.fetchone()[0]
             team.elo += delta if delta is not None else 0
             content += f"{team.team_id} | {team.name}({team.elo}): {team.player_one.name} \
 & {team.player_two.name}\n"

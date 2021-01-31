@@ -36,7 +36,7 @@ def log(log_file: str, level: str):
         "warn": logging.WARNING,
         "error": logging.ERROR,
     }
-    config = logging.basicConfig(
+    logging.basicConfig(
         level=lm.get(level.lower(), logging.INFO),
         format= "%(asctime)s; %(levelname)s | %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
