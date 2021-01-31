@@ -3,10 +3,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from matchmaker.event import EventKind, EventHandler, EventMap, EventContext
-from matchmaker.event.events import DequeueEvent, QueueEvent, ResultEvent
+from matchmaker.event.events import (
+    DequeueEvent, QueueEvent, ResultEvent, RoundStartEvent, RoundEndEvent
+)
 from matchmaker.event.error import HandlingError
 from matchmaker.mm.context import Context
-from matchmaker.tables import Team, Result, Match
+from matchmaker.tables import Team, Result, Match, Round
 from matchmaker import Database
 
 @dataclass
@@ -29,7 +31,6 @@ class EqHandler(EventHandler):
         pass
 
 def setup(cls):
-    cls.evmap = EventMap.new()
     cls.context = Context()
     cls.db = Database("tests/empty_mockdb.sqlite3")
 
@@ -39,65 +40,65 @@ class EventMapTest(unittest.TestCase):
         setup(cls)
 
     def test_add_handler(self):
-        self.evmap = EventMap.new()
-        self.evmap.register(
+        evmap = EventMap.new()
+        evmap.register(
             EventKind.QUEUE,
             EqHandler(tag=1)
         )
-        self.evmap.register(
+        evmap.register(
             EventKind.DEQUEUE,
             EqHandler(tag=1)
         )
-        self.evmap.register(
+        evmap.register(
             EventKind.RESULT,
             EqHandler(tag=1)
         )
-        self.evmap.register(
+        evmap.register(
             EventKind.ROUND_START,
             EqHandler(tag=1)
         )
-        self.evmap.register(
+        evmap.register(
             EventKind.ROUND_END,
             EqHandler(tag=1)
         )
-        assert len(self.evmap[EventKind.QUEUE]) == 1
-        assert len(self.evmap[EventKind.DEQUEUE]) == 1
-        assert len(self.evmap[EventKind.RESULT]) == 1
-        assert len(self.evmap[EventKind.ROUND_START]) == 1
-        assert len(self.evmap[EventKind.ROUND_END]) == 1
+        assert len(evmap[EventKind.QUEUE]) == 1
+        assert len(evmap[EventKind.DEQUEUE]) == 1
+        assert len(evmap[EventKind.RESULT]) == 1
+        assert len(evmap[EventKind.ROUND_START]) == 1
+        assert len(evmap[EventKind.ROUND_END]) == 1
 
     def test_remove_handler(self):
-        self.evmap = EventMap.new()
-        self.evmap.register(
+        evmap = EventMap.new()
+        evmap.register(
             EventKind.QUEUE,
             EqHandler(tag=1)
         )
-        assert len(self.evmap[EventKind.QUEUE]) == 1
-        self.evmap.deregister(
+        assert len(evmap[EventKind.QUEUE]) == 1
+        evmap.deregister(
             EventKind.QUEUE,
             EqHandler(tag=1)
         )
-        assert len(self.evmap[EventKind.QUEUE]) == 0
+        assert len(evmap[EventKind.QUEUE]) == 0
     
     def test_temp_handle(self):
-        self.evmap = EventMap.new()
-        self.evmap.register(
+        evmap = EventMap.new()
+        evmap.register(
             EventKind.QUEUE,
             EqHandler(tag=1, key="team", expect=Team(team_id=69))
         )
         qe = QueueEvent(self.db, self.context, Team(team_id=69))
-        assert not isinstance(self.evmap.handle(qe), HandlingError)
-        assert len(self.evmap[EventKind.QUEUE]) == 0
+        assert not isinstance(evmap.handle(qe), HandlingError)
+        assert len(evmap[EventKind.QUEUE]) == 0
     
     def test_persistant_handle(self):
-        self.evmap = EventMap.new()
-        self.evmap.register(
+        evmap = EventMap.new()
+        evmap.register(
             EventKind.QUEUE,
             EqHandler(tag=1, key="team", expect=Team(team_id=69), persistent=True)
         )
         qe = QueueEvent(self.db, self.context, Team(team_id=69))
-        assert not isinstance(self.evmap.handle(qe), HandlingError)
-        assert len(self.evmap[EventKind.QUEUE]) == 1
+        assert not isinstance(evmap.handle(qe), HandlingError)
+        assert len(evmap[EventKind.QUEUE]) == 1
 
 
 
@@ -139,18 +140,20 @@ class ResultEvents(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
-        cls.evmap.register(
+
+    def test_result(self):
+        evmap = EventMap.new()
+        evmap.register(
             EventKind.RESULT,
             EqHandler(tag=1, key="result", expect=Result(result_id=69))
         )
-        cls.evmap.register(
+        evmap.register(
             EventKind.RESULT,
             EqHandler(tag=2, key="match", expect=Match(match_id=42))
         )
-
-    def test_result(self):
         qe = ResultEvent(self.db, self.context, Match(match_id=42), Result(result_id=69))
-        ready = self.evmap.poll(qe)
+
+        ready = evmap.poll(qe)
         handler = next(ready)
         assert handler is not None
         assert handler.tag == 1
@@ -159,10 +162,34 @@ class ResultEvents(unittest.TestCase):
         assert next(ready, None) is None
     
 class RoundEvents(unittest.TestCase):
-    @unittest.skip("Unimplemented!")
+    @classmethod
+    def setUpClass(cls):
+        setup(cls)
+
     def test_round_start(self):
-        return
+        evmap = EventMap.new()
+        evmap.register(
+            EventKind.ROUND_START,
+            EqHandler(tag=1, key="round", expect=Round(round_id=69))
+        )
+
+        qe = RoundStartEvent(self.db, self.context, Round(round_id=69))
+        ready = evmap.poll(qe)
+        handler = next(ready)
+        assert handler is not None
+        assert handler.tag == 1
+        assert next(ready, None) is None
     
-    @unittest.skip("Unimplemented!")
     def test_round_end(self):
-        return
+        evmap = EventMap.new()
+        evmap.register(
+            EventKind.ROUND_END,
+            EqHandler(tag=2, key="round", expect=Round(round_id=69))
+        )
+
+        qe = RoundEndEvent(self.db, self.context, Round(round_id=69))
+        ready = evmap.poll(qe)
+        handler = next(ready)
+        assert handler is not None
+        assert handler.tag == 2
+        assert next(ready, None) is None

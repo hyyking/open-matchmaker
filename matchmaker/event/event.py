@@ -32,6 +32,7 @@ class EventContext:
     team: Optional[Team] = field(default=None)
     match: Optional[Match] = field(default=None)
     result: Optional[Result] = field(default=None)
+    round: Optional[Round] = field(default=None)
 
     timestamp: Optional[datetime] = field(default=None)
 

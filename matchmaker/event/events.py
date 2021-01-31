@@ -70,7 +70,7 @@ class RoundStartEvent(Event):
     
     @property
     def kind(self) -> EventKind:
-        return EventKind.DEQUEUE
+        return EventKind.ROUND_START
 
     @property
     def ctx(self) -> EventContext:
@@ -88,7 +88,7 @@ class RoundEndEvent(Event):
     
     @property
     def kind(self) -> EventKind:
-        return EventKind.DEQUEUE
+        return EventKind.ROUND_END
 
     @property
     def ctx(self) -> EventContext:
