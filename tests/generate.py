@@ -25,7 +25,7 @@ def no_results() -> int:
 
 def generate(db):
     players = []
-    for i in range(PLAYERS):
+    for i in range(1, PLAYERS + 1):
         player = Player(i, f"Player_{i}")
         assert db.insert(player)
         players.append(player)
@@ -53,7 +53,7 @@ def generate(db):
             start = prev_time
             prev_time += timedelta(minutes=15)
             prev_round = Round(
-                round_id=i//ROUND_EVERY,
+                round_id=i//ROUND_EVERY + 1,
                 start_time=start,
                 end_time=prev_time,
                 participants=4

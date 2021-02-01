@@ -1,4 +1,6 @@
 import abc
+from typing import Optional
+
 from .template import ColumnQuery
 
 __all__ = ("Insertable", "UniqueId", "Loadable")
@@ -36,5 +38,5 @@ class Table(abc.ABC):
 
 class Loadable(abc.ABC):
     @abc.abstractclassmethod
-    def load_from(cls, conn, rhs):
+    def load_from(cls, conn, rhs) -> Optional["Loadable"]:
         raise NotImplementedError

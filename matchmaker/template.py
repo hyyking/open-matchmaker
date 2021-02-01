@@ -11,6 +11,13 @@ class AsStatement(abc.ABC):
 
 Statement = Union[str, int, AsStatement]
 
+def render_statement(s: Statement) -> Statement:
+    """ removes AsStatement type of union """
+    if isinstance(s, AsStatement):
+        return s.render()
+    else: 
+        return s
+
 class QueryKind(Enum):
     NONE = 0
     SELECT = 1
@@ -30,8 +37,8 @@ class WithOperand(AsStatement):
             op2 = f"\'{self.operand_2}\'" 
         else:
             op2 = self.operand_2
-        op1 = op1.render() if isinstance(op1, AsStatement) else op1
-        op2 = op2.render() if isinstance(op2, AsStatement) else op2
+        op1 = render_statement(op1)
+        op2 = render_statement(op2)
         if self.wrap:
             return f"({op1} {self.operation} {op2})"
         else:
@@ -54,6 +61,8 @@ class And(WithOperand):
         self.operation = "AND"
         self.wrap = True
 
+Conditional= Union[Eq, Or, And]
+
 class Values(AsStatement, tuple):
     def render(self):
         convert = lambda x: f"\'{x}\'" if isinstance(x, str) else str(x)
@@ -64,19 +73,17 @@ class Values(AsStatement, tuple):
 class Sum(AsStatement):
     header: Statement
     def render(self):
-        h = self.header
-        header = h.render() if isinstance(h, AsStatement) else h 
-        return f"SUM({header})"
+        return f"SUM({render_statement(self.header)})"
 
 @dataclass
 class InnerJoin(AsStatement):
     table: Statement 
     on: Optional[Statement] = None
     def render(self):
-        table = self.table.render() if isinstance(self.table, AsStatement) else self.table
+        table = render_statement(self.table)
         if self.on is None:
             return f"INNER JOIN {table}"
-        return f"INNER JOIN {table} ON {self.on.render()}\n"
+        return f"INNER JOIN {table} ON {render_statement(self.on)}\n"
 
 @dataclass
 class Alias(AsStatement):
@@ -89,9 +96,7 @@ class Alias(AsStatement):
 class Where(AsStatement):
     conditions: Statement
     def render(self):
-        c = self.conditions
-        conditions = c.render() if isinstance(c, AsStatement) else c
-        return f"WHERE {conditions}\n"
+        return f"WHERE {render_statement(self.conditions)}\n"
 
 
 SELECT = """
@@ -112,8 +117,8 @@ SELECT EXISTS(
 class ColumnQuery(AsStatement):
     kind: QueryKind
     table: str
-    headers: List[Statement]
-    statement: Union[AsStatement, List[AsStatement]]
+    headers: Union[Statement, List[Statement]]
+    statement: Union[Statement, List[Statement]]
 
     def __repr__(self):
         if self.kind is QueryKind.SELECT:
@@ -131,16 +136,14 @@ class ColumnQuery(AsStatement):
         return cls(kind, table, [key], Where(Eq(key, value)))
 
     def join_headers(self) -> str:
-        hmap = lambda x: x.render() if isinstance(x, AsStatement) else x
-        return ",".join(map(hmap, self.headers))
+        if not isinstance(self.headers, list):
+            self.header = [self.headers]
+        return ",".join(map(render_statement, self.headers))
     
     def render_statements(self) -> str:
-        if isinstance(self.statement, list):
-            return f" ".join(map(lambda x: x.render(), self.statement))
-        elif isinstance(self.statement, AsStatement):
-            return self.statement.render()
-        else:
-            raise Exception
+        if not isinstance(self.statement, list):
+            self.statement = [self.statement]
+        return f" ".join(map(render_statement, self.statement))
 
     def render(self) -> str:
         context = {

@@ -28,7 +28,7 @@ class ExistsQueries(unittest.TestCase):
         cls.db = Database("tests/full_mockdb.sqlite3")
 
     def test_exists_unique_player(self):
-        for i in range(PLAYERS):
+        for i in range(1, PLAYERS + 1):
             assert self.db.exists_unique(Player(discord_id=i))
 
     def test_exists_unique_round(self):
@@ -97,18 +97,33 @@ class LoadQueries(unittest.TestCase):
     def setUpClass(cls):
         cls.db = Database("tests/full_mockdb.sqlite3")
         
-    @unittest.skip("Unimplemented!")
     def test_load_player(self):
-        pass
-    @unittest.skip("Unimplemented!")
+        for i in range(1, PLAYERS + 1):
+            player = self.db.load(Player(discord_id=i))
+            assert player is not None
+            assert player.discord_id == i
+            assert player.name == f"Player_{i}"
+
     def test_load_round(self):
-        pass
-    @unittest.skip("Unimplemented!")
+        for i in range(1, no_rounds() + 1):
+            round = self.db.load(Round(round_id=i))
+            assert round is not None
+            assert round.round_id == i
+    
     def test_load_team(self):
-        pass
-    @unittest.skip("Unimplemented!")
+        for i in range(1, no_teams() + 1):
+            team = self.db.load(Team(team_id=i))
+            assert team is not None
+            assert team.team_id == i
+
     def test_load_match(self):
-        pass
-    @unittest.skip("Unimplemented!")
+        for i in range(1, no_matches() + 1):
+            match = self.db.load(Match(match_id=i))
+            assert match is not None
+            assert match.match_id == i
+
     def test_load_result(self):
-        pass
+        for i in range(1, no_results() + 1):
+            result = self.db.load(Result(result_id=i))
+            assert result is not None
+            assert result.result_id == i

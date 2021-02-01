@@ -43,3 +43,28 @@ CREATE TABLE IF NOT EXISTS result (
     
     FOREIGN KEY (team_id) REFERENCES team(team_id)
 );
+
+-- Query Team with Player info
+CREATE VIEW IF NOT EXISTS team_with_details AS
+SELECT team.team_id,
+       team.name as team_name,
+       p1.discord_id as player_one_id,
+       p1.name as player_one_name,
+       p2.discord_id as player_two_id,
+       p2.name as player_two_name
+FROM team
+INNER JOIN player as p1 on team.player_one = p1.discord_id
+INNER JOIN player as p2 on team.player_two = p2.discord_id;
+
+-- Query Team with Player and elo delta
+CREATE VIEW IF NOT EXISTS team_details_with_delta AS
+SELECT team.*, SUM(result.delta) as delta_sum
+FROM result
+INNER JOIN team_with_details as team ON team.team_id = result.team_id
+GROUP BY team.team_id;
+
+-- Query Result with Team details
+CREATE VIEW IF NOT EXISTS result_with_team_details AS
+SELECT result.result_id, team.*, result.points, result.delta
+FROM result
+INNER JOIN team_with_details as team ON result.team_id = team.team_id;

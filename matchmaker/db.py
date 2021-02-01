@@ -1,6 +1,6 @@
 import sqlite3 as sql
 import logging
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, cast
 
 from .operations import Table, Insertable, Loadable
 from .template import ColumnQuery, QueryKind
@@ -36,7 +36,7 @@ class Database:
 
     def load(self, query: Loadable) -> Optional[Loadable]:
         try: 
-            l: Loadable = type(query).load_from(self, query) # type: ignore
+            l = cast(Optional[Loadable], type(query).load_from(self, query)) # type: ignore
             self.logger.debug(f"Executed load query for {query}")
             return l
         except Exception as err:
