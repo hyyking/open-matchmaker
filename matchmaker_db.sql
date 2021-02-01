@@ -58,9 +58,9 @@ INNER JOIN player as p2 on team.player_two = p2.discord_id;
 
 -- Query Team with Player and elo delta
 CREATE VIEW IF NOT EXISTS team_details_with_delta AS
-SELECT team.*, SUM(result.delta) as delta_sum
-FROM result
-INNER JOIN team_with_details as team ON team.team_id = result.team_id
+SELECT team.*, COALESCE(SUM(result.delta), 0) as delta_sum
+FROM team_with_details as team
+LEFT OUTER JOIN result ON team.team_id = result.team_id
 GROUP BY team.team_id;
 
 -- Query Result with Team details

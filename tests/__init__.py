@@ -4,6 +4,8 @@ import unittest
 
 from .queries import SelectQueries, SpecializedQueries, LoadQueries, ExistsQueries
 from .event import EventMapTest, QueueEvents, ResultEvents, RoundEvents
+from .mm import MatchMakerTest
+from .tables import PlayerTest, TeamTest, ResultTest, MatchTest, RoundTest
 
 class UTGroup:
     """ group unittest using a one dimensionnal tree """
@@ -36,7 +38,9 @@ class UTGroup:
                     self.collect(sub, f"{prefix}::{utkey}")
 
 GROUPS = UTGroup({
-    "all": ["queries"],
+    "all": ["queries", "event", "mm"],
     "queries": ["SelectQueries", "SpecializedQueries", "LoadQueries", "ExistsQueries"],
-    "event": ["QueueEvents", "ResultEvents", "RoundEvents", "EventMapTest"]
+    "event": ["QueueEvents", "ResultEvents", "RoundEvents", "EventMapTest"],
+    "mm": ["MatchMakerTest"],
+    "tables": ["PlayerTest", "TeamTest", "ResultTest", "MatchTest", "RoundTest"]
 })

@@ -1,12 +1,12 @@
 import abc
 from dataclasses import dataclass, field
 from enum import Enum, unique
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
 
 from .error import HandlingError
 from ..tables import Team, Result, Player, Match, Round
-from ..mm.context import Context
+from ..mm.context import QueueContext, InGameContext
 from ..db import Database
 
 __all__ = ("EventKind", "EventContext", "EventHandler", "Event")
@@ -26,7 +26,7 @@ class EventKind(Enum):
 @dataclass
 class EventContext:
     db: Database
-    context: Context
+    context: Union[QueueContext, InGameContext]
 
     player: Optional[Player] = field(default=None)
     team: Optional[Team] = field(default=None)

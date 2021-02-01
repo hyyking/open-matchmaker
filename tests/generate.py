@@ -30,7 +30,7 @@ def generate(db):
         assert db.insert(player)
         players.append(player)
     print(f"-- Generated {len(players)} players")
-    
+
     teams = []
     for i, team in enumerate(combinations(players, 2), 1):
         one, two = team

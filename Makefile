@@ -33,7 +33,7 @@ tests/%.sqlite3: $(SQL) tests/generate.py
 	-@rm $@ 2> /dev/null || true
 	sqlite3 $@ < $(SQL)
 	@if [ $@ = "tests/full_mockdb.sqlite3" ]; then \
-	    python -m tests --generate NO_RUN; \
+	    python -m tests --generate; \
 	fi
 
 

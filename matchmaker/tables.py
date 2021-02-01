@@ -23,16 +23,16 @@ from .db import Database
 
 __all__ = ("Player", "Team", "Round", "Match", "Result")
 
-@dataclass
+@dataclass(eq=False)
 class Player(Table, Insertable, Loadable):
     discord_id: int = field(default=0)
     name: Optional[str] = field(default=None)
-    
+ 
     @property
     def primary_key(self) -> str:
         return "discord_id"
 
-    def match_conditions(self):
+    def match_conditions(self) -> Optional[Conditional]:
         cond = None
         if self.discord_id != 0:
             eq = Eq("discord_id", self.discord_id)
@@ -64,7 +64,7 @@ class Player(Table, Insertable, Loadable):
             Values((self.discord_id, self.name))
         )
 
-@dataclass
+@dataclass(eq=False)
 class Round(Table, Insertable, Loadable):
     round_id: int = field(default=0)
     start_time: Optional[datetime] = field(default=None)
@@ -74,6 +74,11 @@ class Round(Table, Insertable, Loadable):
     @property
     def table(self) -> str:
         return "turn"
+
+    def match_conditions(self) -> Optional[Conditional]:
+        if self.round_id == 0:
+            return None
+        return Eq("round_id", self.round_id)
 
     @classmethod
     def load_from(cls, conn: Database, rhs: "Round") -> Optional["Round"]:
@@ -104,7 +109,7 @@ class Round(Table, Insertable, Loadable):
             values = Values((start_time, self.participants, end_time))
         return ColumnQuery(QueryKind.INSERT, self.table, headers, values)
 
-@dataclass
+@dataclass(eq=False)
 class Team(Table, Insertable, Loadable):
     team_id: int = field(default=0)
     name: Optional[str] = field(default=None)
@@ -116,12 +121,9 @@ class Team(Table, Insertable, Loadable):
     def __hash__(self):
         return hash(self.team_id)
     
-    def absorb_result(self, result: "Result"):
-        assert result.delta is not None
-        self.elo += result.delta
-
-    def has_player(self, player: Player) -> bool:
-        return self.player_one == player or self.player_two == player
+    @property
+    def table(self) -> str:
+        return "team_with_details"
 
     def match_conditions(self) -> Optional[Conditional]:
         cond = None
@@ -129,7 +131,7 @@ class Team(Table, Insertable, Loadable):
             eq = Eq("team_id", self.team_id)
             cond = eq if cond is None else And(eq, cond) # type: ignore
         if self.name is not None:
-            eq = Eq("name", self.name)
+            eq = Eq("team_name", self.name)
             cond = eq if cond is None else And(eq, cond) # type: ignore
         if self.player_one is not None and self.player_two is not None:
             cond1 = self.player_one.match_conds()
@@ -150,7 +152,7 @@ class Team(Table, Insertable, Loadable):
         queried = conn.execute(query, "LoadFromTeam")
         if queried is None:
             return None
-        tid, tname, p1name, p1id, p2name, p2id, delta = queried.fetchone()
+        tid, tname, p1id, p1name, p2id, p2name, delta = queried.fetchone()
 
         return cls(
             team_id=tid,
@@ -161,12 +163,19 @@ class Team(Table, Insertable, Loadable):
         )
 
     def as_insert_query(self):
-        return ColumnQuery(QueryKind.INSERT, self.table,
+        return ColumnQuery(QueryKind.INSERT, "team",
             ["name", "player_one", "player_two"],
             Values((self.name, self.player_one.discord_id, self.player_two.discord_id))
         )
 
-@dataclass
+    def absorb_result(self, result: "Result"):
+        assert result.delta is not None
+        self.elo += result.delta
+
+    def has_player(self, player: Player) -> bool:
+        return self.player_one == player or self.player_two == player
+
+@dataclass(eq=False)
 class Result(Table, Insertable, Loadable):
     result_id: int = field(default=0)
     team: Optional[Team] = field(default=None)
@@ -177,17 +186,22 @@ class Result(Table, Insertable, Loadable):
         assert self.team == other.team
         return Result(self.team, self.points + other.points, self.delta + other.delta)
     
+    @property
+    def table(self) -> str:
+        return "result_with_team_details"
+
+    def match_conditions(self) -> Optional[Conditional]:
+        if self.result_id == 0:
+            return None
+        return Eq("result_id", self.result_id)
+    
     @classmethod
     def load_from(cls, conn: Database, rhs: "Result") -> Optional["Result"]:
-        if rhs.result_id == 0:
+        cond = rhs.match_conditions()
+        if cond is None:
             return None
 
-        query = ColumnQuery(
-            QueryKind.SELECT,
-            "result_with_team_details",
-            "*",
-            Where(Eq("result_id", rhs.result_id))
-        )
+        query = ColumnQuery(QueryKind.SELECT, rhs.table, "*", Where(cond))
         queried = conn.execute(query, "LoadFromResult")
         if queried is None:
             return None
@@ -209,12 +223,12 @@ class Result(Table, Insertable, Loadable):
         )
     
     def as_insert_query(self):
-        return ColumnQuery(QueryKind.INSERT, self.table,
+        return ColumnQuery(QueryKind.INSERT, "result",
             ["team_id", "points", "delta"],
             Values((self.team.team_id, self.points, self.delta))
         )
 
-@dataclass
+@dataclass(eq=False)
 class Match(Table, Insertable, Loadable):
     match_id: Optional[int] = field(default=None)
     round: Optional[Round] = field(default=None)
@@ -222,10 +236,17 @@ class Match(Table, Insertable, Loadable):
     team_two: Optional[Result] = field(default=None)
     odds_ratio: Optional[float] = field(default=1.0)
      
+    def match_conditions(self) -> Optional[Conditional]:
+        if self.match_id == 0:
+            return None
+        return Eq("match_id", self.match_id)
+
     @classmethod
     def load_from(cls, conn: Database, rhs: "Match") -> Optional["Match"]:
-        if rhs.match_id == 0:
+        conds = rhs.match_conditions()
+        if conds is None:
             return None
+
         query = ColumnQuery(QueryKind.SELECT, rhs.table,
             ["match.match_id", "match.odds_ratio", "res1.*", "res2.*", "turn.*"],
             [
@@ -238,7 +259,7 @@ class Match(Table, Insertable, Loadable):
                     on=Eq("match.result_two", "res2.result_id")
                 ),
                 InnerJoin("turn", on=Eq("match.round_id", "turn.round_id")),
-                Where(Eq("match.match_id", rhs.match_id))
+                Where(conds)
             ])
 
         queried = conn.execute(query, "LoadFromMatch")

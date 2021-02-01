@@ -27,25 +27,25 @@ class ExistsQueries(unittest.TestCase):
     def setUpClass(cls):
         cls.db = Database("tests/full_mockdb.sqlite3")
 
-    def test_exists_unique_player(self):
+    def test_exists_player(self):
         for i in range(1, PLAYERS + 1):
-            assert self.db.exists_unique(Player(discord_id=i))
+            assert self.db.exists(Player(discord_id=i))
 
-    def test_exists_unique_round(self):
+    def test_exists_round(self):
         for i in range(1, no_rounds() + 1):
-            assert self.db.exists_unique(Round(round_id=i))
+            assert self.db.exists(Round(round_id=i))
 
-    def test_exists_unique_team(self):
+    def test_exists_team(self):
         for i in range(1, no_teams() + 1):
-            assert self.db.exists_unique(Team(team_id=i))
+            assert self.db.exists(Team(team_id=i))
 
-    def test_exists_unique_match(self):
+    def test_exists_match(self):
         for i in range(1, no_matches() + 1):
-            assert self.db.exists_unique(Match(match_id=i))
+            assert self.db.exists(Match(match_id=i))
 
-    def test_exists_unique_result(self):
+    def test_exists_result(self):
         for i in range(1, no_results() + 1):
-            assert self.db.exists_unique(Result(result_id=i))
+            assert self.db.exists(Result(result_id=i))
 
 class SelectQueries(unittest.TestCase):
     """ Tokenizer Tests """

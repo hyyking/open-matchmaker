@@ -29,13 +29,12 @@ class PlayerCog(commands.Cog, BotContext):
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        if not self.db.exists_unique(current):
+        if not self.db.exists(current, "RegisterUnregisteredPlayer"):
             assert self.db.insert(current)
-        if not self.db.exists_unique(teammate):
+        if not self.db.exists(teammate, "RegisterUnregisteredPlayer"):
             assert self.db.insert(teammate)
         
-        query = ColumnQuery.eq_row("team", "name", team_name, kind=QueryKind.EXISTS)
-        if self.db.exists(query, "RegisterDuplicateTeamName"):
+        if self.db.exists(Team(name=team_name), "IsDuplicateTeamName"):
             message = f"'{team_name}' is already present, use a different name!"
             message = self.bot.fmterr(message)
             await ctx.message.channel.send(content=message, reference=ctx.message)
@@ -51,36 +50,37 @@ class PlayerCog(commands.Cog, BotContext):
                 Eq("player_two", current.discord_id)
             )
         )))
-        if self.db.exists(query, "RegisterTeamExists"):
+        q = self.db.execute(query, "PlayerHasTeam")
+        assert q is not None
+        if q.fetchone()[0] == 1:
             query.kind = QueryKind.SELECT
-            cursor = self.db.execute(query, "RegisterFetchTeamName")
+            cursor = self.db.execute(query, "FetchTeamName")
             assert cursor is not None
-            team: str = cursor.fetchone()[0]
+            team_name: str = cursor.fetchone()[0]
             message = self.bot.fmterr(
-                f"'{current.name}' is already in a team with '{teammate.name}' ('{team}')!"
+                f"'{current.name}' is already in a team with '{teammate.name}' ('{team_name}')!"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
-            assert self.db.insert(Team(0, team, current, teammate))
+            assert self.db.insert(Team(name=team_name, player_one=current, player_two=teammate))
             message = self.bot.fmtok(
-                f"registered {current.name}'s and {teammate.name}'s team {team}"
+                f"registered {current.name}'s and {teammate.name}'s team {team_name}"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
     async def queue(self, ctx, *, team_name: str):
         current = Player(ctx.message.author.id, ctx.message.author.name)
-        mmctx = self.bot.mm.context
+        mm = self.bot.mm
 
-        query = ColumnQuery.eq_row("team", "name", team_name, kind=QueryKind.EXISTS)
-        if not self.db.exists(query, "AddTeamExists"):
+        if not self.db.exists(Team(name=team_name), "IsTeamExists"):
             message = self.bot.fmterr(f"'{team_name}' is not a valid team name!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
         team = cast(Optional[Team], self.db.load(
             Team(name=team_name, elo=self.mm.config.base_elo)))
-        
+
         assert team is not None
         assert team.name is not None
         assert team.player_one is not None
@@ -93,36 +93,36 @@ class PlayerCog(commands.Cog, BotContext):
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        if mmctx.has_player(team.player_one):
-            curr = mmctx.get_team_of_player(team.player_one)
+        if mm.has_queued_player(team.player_one):
+            curr = mm.get_team_of_player(team.player_one)
             assert curr is not None
             message = self.bot.fmterr(
                 f"'{team.player_one.name}' is queuing in team '{curr.name}'!"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
-        elif mmctx.has_player(team.player_two):
-            curr = mmctx.get_team_of_player(team.player_one)
+        elif mm.has_queud_player(team.player_two):
+            curr = mm.get_team_of_player(team.player_one)
             assert curr is not None
             message = self.bot.fmterr(
                 f"'{team.player_two.name}' is queuing in team '{curr.name}'!"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
-            mmctx.queue_team(team)
+            assert mm.queue_team(team)
             message = self.bot.fmtok(f"""queued {team.name}({team.elo})""")
             await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
     async def dequeue(self, ctx):
         current = Player(ctx.message.author.id, ctx.message.author.name)
-        mmctx = self.bot.mm.context 
+        mm = self.bot.mm
         
-        if not mmctx.has_player(current):
+        if not mm.has_queued_player(current):
             message = self.bot.fmterr(f"None of your teams are queued!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
 
-        team = mmctx.get_team_of_player(current)
-        assert mmctx.dequeue_team(team)
+        team = mm.get_team_of_player(current)
+        assert mm.dequeue_team(team)
 
         message = self.bot.fmtok(f"dequeued {team.name}")
         await ctx.message.channel.send(

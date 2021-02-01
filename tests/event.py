@@ -7,7 +7,7 @@ from matchmaker.event.events import (
     DequeueEvent, QueueEvent, ResultEvent, RoundStartEvent, RoundEndEvent
 )
 from matchmaker.event.error import HandlingError
-from matchmaker.mm.context import Context
+from matchmaker.mm.context import QueueContext, InGameContext
 from matchmaker.tables import Team, Result, Match, Round
 from matchmaker import Database
 
@@ -31,7 +31,8 @@ class EqHandler(EventHandler):
         pass
 
 def setup(cls):
-    cls.context = Context()
+    cls.qctx = QueueContext()
+    cls.igctx = InGameContext()
     cls.db = Database("tests/empty_mockdb.sqlite3")
 
 class EventMapTest(unittest.TestCase):
@@ -86,7 +87,7 @@ class EventMapTest(unittest.TestCase):
             EventKind.QUEUE,
             EqHandler(tag=1, key="team", expect=Team(team_id=69))
         )
-        qe = QueueEvent(self.db, self.context, Team(team_id=69))
+        qe = QueueEvent(self.db, self.qctx, Team(team_id=69))
         assert not isinstance(evmap.handle(qe), HandlingError)
         assert len(evmap[EventKind.QUEUE]) == 0
     
@@ -96,7 +97,7 @@ class EventMapTest(unittest.TestCase):
             EventKind.QUEUE,
             EqHandler(tag=1, key="team", expect=Team(team_id=69), persistent=True)
         )
-        qe = QueueEvent(self.db, self.context, Team(team_id=69))
+        qe = QueueEvent(self.db, self.qctx, Team(team_id=69))
         assert not isinstance(evmap.handle(qe), HandlingError)
         assert len(evmap[EventKind.QUEUE]) == 1
 
@@ -106,6 +107,8 @@ class QueueEvents(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         setup(cls)
+        cls.evmap = EventMap.new()
+
         cls.evmap.register(
             EventKind.QUEUE,
             EqHandler(tag=1, key="team", expect=Team(team_id=69))
@@ -120,7 +123,7 @@ class QueueEvents(unittest.TestCase):
         )
 
     def test_queue(self):
-        qe = QueueEvent(self.db, self.context, Team(team_id=69))
+        qe = QueueEvent(self.db, self.qctx, Team(team_id=69))
         ready = self.evmap.poll(qe)
         handler = next(ready)
         assert handler is not None
@@ -128,7 +131,7 @@ class QueueEvents(unittest.TestCase):
         assert next(ready, None) is None
     
     def test_dequeue(self):
-        qe = DequeueEvent(self.db, self.context, Team(team_id=69))
+        qe = DequeueEvent(self.db, self.qctx, Team(team_id=69))
         ready = self.evmap.poll(qe)
         handler = next(ready)
         assert handler is not None
@@ -151,7 +154,7 @@ class ResultEvents(unittest.TestCase):
             EventKind.RESULT,
             EqHandler(tag=2, key="match", expect=Match(match_id=42))
         )
-        qe = ResultEvent(self.db, self.context, Match(match_id=42), Result(result_id=69))
+        qe = ResultEvent(self.db, self.igctx, Match(match_id=42), Result(result_id=69))
 
         ready = evmap.poll(qe)
         handler = next(ready)
@@ -173,7 +176,7 @@ class RoundEvents(unittest.TestCase):
             EqHandler(tag=1, key="round", expect=Round(round_id=69))
         )
 
-        qe = RoundStartEvent(self.db, self.context, Round(round_id=69))
+        qe = RoundStartEvent(self.db, self.igctx, Round(round_id=69))
         ready = evmap.poll(qe)
         handler = next(ready)
         assert handler is not None
@@ -187,7 +190,7 @@ class RoundEvents(unittest.TestCase):
             EqHandler(tag=2, key="round", expect=Round(round_id=69))
         )
 
-        qe = RoundEndEvent(self.db, self.context, Round(round_id=69))
+        qe = RoundEndEvent(self.db, self.igctx, Round(round_id=69))
         ready = evmap.poll(qe)
         handler = next(ready)
         assert handler is not None

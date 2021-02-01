@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 from .event import Event, EventKind, EventContext
-from ..mm.context import Context
+from ..mm.context import QueueContext, InGameContext
 from ..db import Database
 from ..tables import Team, Result, Player, Match, Round
 
 @dataclass
 class QueueEvent(Event):
-    context: Context
+    context: QueueContext
     db: Database
     team: Team
 
@@ -26,7 +26,7 @@ class QueueEvent(Event):
 
 @dataclass
 class DequeueEvent(Event):
-    context: Context
+    context: QueueContext
     db: Database
     team: Team
     
@@ -45,7 +45,7 @@ class DequeueEvent(Event):
 @dataclass
 class ResultEvent(Event):
     db: Database
-    context: Context
+    context: InGameContext
     match: Match
     result: Result
     
@@ -65,7 +65,7 @@ class ResultEvent(Event):
 @dataclass
 class RoundStartEvent(Event):
     db: Database
-    context: Context
+    context: InGameContext
     round: Round
     
     @property
@@ -83,7 +83,7 @@ class RoundStartEvent(Event):
 @dataclass
 class RoundEndEvent(Event):
     db: Database
-    context: Context
+    context: InGameContext
     round: Round
     
     @property

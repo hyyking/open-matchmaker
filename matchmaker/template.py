@@ -61,7 +61,7 @@ class And(WithOperand):
         self.operation = "AND"
         self.wrap = True
 
-Conditional= Union[Eq, Or, And]
+Conditional = Union[Eq, Or, And]
 
 class Values(AsStatement, tuple):
     def render(self):
@@ -159,7 +159,6 @@ class ColumnQuery(AsStatement):
             del context["headers"]
             return EXISTS.format(**context)
         elif self.kind is QueryKind.INSERT:
-            assert isinstance(self.statement, Values)
             return "INSERT INTO {table}({headers}) VALUES {statements}".format(**context)
         else:
             raise NotImplementedError(f"Missing QueryKind {self.kind}")

@@ -3,7 +3,7 @@ import logging
 from typing import Any, Optional, Dict, cast
 
 from .operations import Table, Insertable, Loadable
-from .template import ColumnQuery, QueryKind
+from .template import ColumnQuery, QueryKind, Where
 
 QUERYERROR = """{title} {{
     item: {item},
@@ -30,41 +30,22 @@ class Database:
     def conn(self) -> sql.Cursor:
         return self.__conn.cursor()
     
-    def insert(self, query: Insertable) -> bool:
+    def insert(self, query: Insertable, title: str = "InsertQuery") -> bool:
         """ insert to the database, returns False on failure """
-        return self.execute(query.as_insert_query(), "InsertQuery") is not None
+        return self.execute(query.as_insert_query(), title) is not None
 
-    def load(self, query: Loadable) -> Optional[Loadable]:
-        try: 
-            l = cast(Optional[Loadable], type(query).load_from(self, query)) # type: ignore
-            self.logger.debug(f"Executed load query for {query}")
-            return l
-        except Exception as err:
-            context = {
-                "title": "Load",
-                "item": query,
-                "query": None,
-                "exception": err
-            }
-            self.logger.error(QUERYERROR.format(**context))
-            return None
-
-    def exists_unique(self, query: Table) -> bool:
-        """ check existance of a value in database """
-        uq: ColumnQuery = query.primary_key_query()
-        uq.kind = QueryKind.EXISTS
-        return self.exists(uq, "ExistUniqueQuery")
-    
-    def exists(self, query: ColumnQuery, title: str) -> bool:
-        assert query.kind == QueryKind.EXISTS
+    def exists(self, query: Table, title: str = "ExistQuery") -> bool:
+        conds = query.match_conditions()
+        if conds is None:
+            return False
+        query = ColumnQuery(QueryKind.EXISTS, query.table, "1", Where(conds))
         q = self.execute(query, title)
-        assert q is not None
-        return q.fetchone()[0] == 1
+        return q is None or q.fetchone()[0] == 1
 
     def execute(self, query: ColumnQuery, title: str) -> Optional[sql.Cursor]:
         try: 
             q = self.conn.execute(query.render())
-            self.logger.debug(f"Executed {title} query for {query}")
+            self.logger.debug(f"Executed {title} query")
             return q
         except Exception as err:
             context = {
@@ -76,6 +57,21 @@ class Database:
             self.logger.error(QUERYERROR.format(**context))
             del context["query"]
             self.last_err = context
+            return None
+    
+    def load(self, query: Loadable, title: str = "LoadQuery") -> Optional[Loadable]:
+        try: 
+            l = cast(Optional[Loadable], type(query).load_from(self, query)) # type: ignore
+            self.logger.debug(f"Executed {title} query")
+            return l
+        except Exception as err:
+            context = {
+                "title": "Load",
+                "item": query,
+                "query": None,
+                "exception": err
+            }
+            self.logger.error(QUERYERROR.format(**context))
             return None
 
     def summarize(self):

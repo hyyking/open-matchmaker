@@ -19,16 +19,14 @@ def parser():
     parser.add_argument("--generate", help="generate mock database", action="store_true")
     return parser
 
-if __name__ == "__main__":
-    def main(args):
-        if args.generate:
-            generate(Database("tests/full_mockdb.sqlite3"))
-        
-        if "NO_RUN" in args.tests:
-            return
+def main(args):
+    if args.generate:
+        generate(Database("tests/full_mockdb.sqlite3"))
+        return
 
-        for test in args.tests:
-            GROUPS.collect(test)
-        GROUPS.run(args.verbosity)
-    
+    for test in args.tests:
+        GROUPS.collect(test)
+    GROUPS.run(args.verbosity)
+
+if __name__ == "__main__": 
     main(parser().parse_args())
