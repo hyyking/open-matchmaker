@@ -61,7 +61,7 @@ class MatchTriggerHandler(EventHandler):
         return None
 
 
-class InGameEndHandler(EventHandler):
+class GameEndHandler(EventHandler):
     def __init__(self, games: Games):
         self.games = games
 

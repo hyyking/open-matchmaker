@@ -56,7 +56,6 @@ class ResultEvent(Event):
 
 @dataclass
 class RoundStartEvent(Event):
-    db: Database
     context: InGameContext
     round: Round
     
@@ -67,14 +66,12 @@ class RoundStartEvent(Event):
     @property
     def ctx(self) -> EventContext:
         return EventContext(
-            db=self.db,
             context=self.context,
             round=self.round
         )
 
 @dataclass
 class RoundEndEvent(Event):
-    db: Database
     context: InGameContext
     round: Round
     
@@ -85,7 +82,6 @@ class RoundEndEvent(Event):
     @property
     def ctx(self) -> EventContext:
         return EventContext(
-            db=self.db,
             context=self.context,
             round=self.round,
         )
