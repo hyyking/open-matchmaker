@@ -3,12 +3,18 @@
 import unittest
 
 from .queries import SelectQueries, SpecializedQueries, LoadQueries, ExistsQueries
-from .event import EventMapTest, QueueEvents, ResultEvents, RoundEvents
-from .mm import MatchMakerTest
+
+from .event import EventMapTest
+from .event.events import QueueEventsTest, ResultEventsTest, RoundEventsTest
+from .event.handlers import MatchTriggerHandlerTest, GameEndHandlerTest
+
 from .tables import PlayerTest, TeamTest, ResultTest, MatchTest, RoundTest
+from .mm import MatchMakerTest, QueueContextTest, InGameContextTest
+
 
 class UTGroup:
     """ group unittest using a one dimensionnal tree """
+
     def __init__(self, tree):
         self.tree = tree
         self.stack = []
@@ -22,7 +28,7 @@ class UTGroup:
             print(f">>>>> {prefix}::{test.__name__} <<<<<")
             text.run(unittest.TestSuite(loaded_test))
 
-    def collect(self, utkey, prefix = ""):
+    def collect(self, utkey, prefix=""):
         """ collect all unittest that need to be run for utkey """
         group = self.tree.get(utkey)
         test = globals().get(utkey)
@@ -37,10 +43,22 @@ class UTGroup:
                 else:
                     self.collect(sub, f"{prefix}::{utkey}")
 
-GROUPS = UTGroup({
-    "all": ["queries", "event", "mm"],
-    "queries": ["SelectQueries", "SpecializedQueries", "LoadQueries", "ExistsQueries"],
-    "event": ["QueueEvents", "ResultEvents", "RoundEvents", "EventMapTest"],
-    "mm": ["MatchMakerTest"],
-    "tables": ["PlayerTest", "TeamTest", "ResultTest", "MatchTest", "RoundTest"]
-})
+
+GROUPS = UTGroup(
+    {
+        "all": ["queries", "event", "mm"],
+        "queries": [
+            "SelectQueries",
+            "SpecializedQueries",
+            "LoadQueries",
+            "ExistsQueries",
+        ],
+        "tables": ["PlayerTest", "TeamTest", "ResultTest", "MatchTest", "RoundTest"],
+        "event": ["EventMapTest", "events", "handlers"],
+        "events": ["QueueEventsTest", "ResultEventsTest", "RoundEventsTest"],
+        "handlers": ["MatchTriggerHandlerTest", "GameEndHandlerTest"],
+        "mm": ["MatchMakerTest", "queuectx", "ingamectx"],
+        "queuectx": ["QueueContextTest"],
+        "ingamectx": ["InGameContextTest"],
+    }
+)

@@ -13,10 +13,10 @@ class PlayerTest(unittest.TestCase):
     def test_hash(self):
         assert hash(self.p1) == hash(self.p2)
         assert not hash(self.p1) == hash(self.p3)
-    
+
     def test_eq(self):
         assert self.p1 == self.p2
-        assert not self.p1 == self.p3 
+        assert not self.p1 == self.p3
 
 
 class TeamTest(unittest.TestCase):
@@ -29,11 +29,11 @@ class TeamTest(unittest.TestCase):
     def test_hash(self):
         assert hash(self.t1) == hash(self.t2)
         assert not hash(self.t1) == hash(self.t3)
-        
+
     def test_eq(self):
         assert self.t1 == self.t2
         assert not self.t1 == self.t3
-     
+
 
 class MatchTest(unittest.TestCase):
     @classmethod
@@ -45,7 +45,7 @@ class MatchTest(unittest.TestCase):
     def test_hash(self):
         assert hash(self.m1) == hash(self.m2)
         assert not hash(self.m1) == hash(self.m3)
-      
+
     def test_eq(self):
         assert self.m1 == self.m2
         assert not self.m1 == self.m3
@@ -61,7 +61,7 @@ class ResultTest(unittest.TestCase):
     def test_hash(self):
         assert hash(self.r1) == hash(self.r2)
         assert not hash(self.r1) == hash(self.r3)
-      
+
     def test_eq(self):
         assert self.r1 == self.r2
         assert not self.r1 == self.r3
@@ -77,7 +77,7 @@ class RoundTest(unittest.TestCase):
     def test_hash(self):
         assert hash(self.r1) == hash(self.r2)
         assert not hash(self.r1) == hash(self.r3)
-      
+
     def test_eq(self):
         assert self.r1 == self.r2
         assert not self.r1 == self.r3

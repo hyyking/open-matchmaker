@@ -7,6 +7,7 @@ from tests.generate import generate
 
 from matchmaker import Database
 
+
 def parser():
     """ new commandline argument parser for the test suite """
     parser = ag.ArgumentParser(description="Test suite for logstf module")
@@ -16,8 +17,11 @@ def parser():
     parser.add_argument(
         "-v", "--verbosity", default=2, help="verbosity level [0, 1, 2]", type=int
     )
-    parser.add_argument("--generate", help="generate mock database", action="store_true")
+    parser.add_argument(
+        "--generate", help="generate mock database", action="store_true"
+    )
     return parser
+
 
 def main(args):
     if args.generate:
@@ -28,5 +32,6 @@ def main(args):
         GROUPS.collect(test)
     GROUPS.run(args.verbosity)
 
-if __name__ == "__main__": 
+
+if __name__ == "__main__":
     main(parser().parse_args())
