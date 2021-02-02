@@ -34,6 +34,7 @@ class Principal(abc.ABC):
     def __call__(self, context: QueueContext) -> InGameContext:
         pass
 
+class UtilityBasedPrincipal(Principal):
     def expected_score(self, lhs: Team, rhs: Team) -> float:
         """ compute expected score according to the elo formula """
         return round((1 / ( 1 + 10**((rhs.elo - lhs.elo)/400))) * self.config.points_per_match, 2)
@@ -73,7 +74,7 @@ class Principal(abc.ABC):
 
 __all__ = ("get_principal", "MaxSum", "MinVariance", "MaxMin", "MinMax")
 
-class MaxSum(Principal):
+class MaxSum(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return sum(map(lambda x: self.match_utility(x), matches))
 
@@ -82,7 +83,7 @@ class MaxSum(Principal):
         pick = max(p_sets, key = lambda matches: self.utility(matches))
         return InGameContext(self.round, list(pick))
 
-class MinVariance(Principal):
+class MinVariance(UtilityBasedPrincipal):
     def variance(self, matches: Tuple[Match, ...]):
         utilities = map(lambda x: self.match_utility(x), matches)
         mean = sum(utilities) / len(matches)
@@ -93,7 +94,7 @@ class MinVariance(Principal):
         pick = min(p_sets, key = lambda matches: self.variance(matches))
         return InGameContext(self.round, list(pick))
 
-class MaxMin(Principal):
+class MaxMin(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return min(map(lambda x: self.match_utility(x), matches))
 
@@ -102,7 +103,7 @@ class MaxMin(Principal):
         pick = max(p_sets, key = lambda matches: self.utility(matches))
         return InGameContext(self.round, list(pick))
 
-class MinMax(Principal):
+class MinMax(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return max(map(lambda x: self.match_utility(x), matches))
 
@@ -121,7 +122,7 @@ def get_principal(round: Round, config: Config) -> Principal:
     principal = principals.get(config.principal)
     if principal is None:
         logger = logging.getLogger(__name__)
-        logger.warn(f"Principal '{self.config.principal}' not found using 'max_sum' instead")
+        logger.warn(f"Principal '{config.principal}' not found using 'max_sum' instead")
         logger.info(f"use one of {list(principals.keys())}")
         return MaxSum(round, config)
     else:

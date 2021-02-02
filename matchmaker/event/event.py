@@ -38,7 +38,7 @@ class EventContext:
 
 class EventHandler(abc.ABC):
     @abc.abstractproperty
-    def kind(self) -> int:
+    def kind(self) -> EventKind:
         pass
 
     @abc.abstractproperty

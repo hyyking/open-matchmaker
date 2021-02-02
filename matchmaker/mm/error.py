@@ -1,46 +1,50 @@
 from typing import Union, TypeVar
 
 from ..tables import Team, Match
+from ..operations import Table
+from ..error import Error
 
-__all__ = ("Fail", "QueueError", "DequeueError", "ResultError")
+__all__ = (
+    "MissingFieldsError",
+    "MissingContextError",
+    "NotQueuedError",
+    "AlreadyQueuedError",
+    "GameAlreadyExistError",
+    "GameEndedError",
+    "DuplicateResultError"
+)
 
-class QueueError(Exception):
-    def __init__(self, message: str, team: Team):
+class MissingFieldsError(Error):
+    def __init__(self, message: str, table: Table):
         super().__init__(message)
-        self.message = message
-        self.team = team
+        self.table = table
 
-    def __repr__(self):
-        return f"QueueError(message={self.message}, team={self.team})"
-
-class DequeueError(Exception):
-    def __init__(self, message: str, team: Team):
-        super().__init__(message)
-        self.message = message
-        self.team = team
-
-    def __repr__(self):
-        return f"DequeueError(message={self.message}, team={self.team})"
-
-class ResultError(Exception):
+class MissingContextError(Error):
     def __init__(self, message: str, result: Match):
         super().__init__(message)
-        self.message = message
         self.result = result
 
-    def __repr__(self):
-        return f"ResultError(message={self.message}, queue={self.result})"
+class NotQueuedError(Error):
+    def __init__(self, message: str, team: Team):
+        super().__init__(message)
+        self.team = team
 
+class AlreadyQueuedError(Error):
+    def __init__(self, message: str, team: Team):
+        super().__init__(message)
+        self.team = team
 
-class GameAlreadyExistError(Exception):
+class GameAlreadyExistError(Error):
     def __init__(self, message: str, key: int):
         super().__init__(message)
-        self.message = message
         self.key = key
 
-    def __repr__(self):
-        return f"GameAlreadyExists(message={self.message}, queue={self.key})"
+class GameEndedError(Error):
+    def __init__(self, message: str, result: Match):
+        super().__init__(message)
+        self.result = result
 
-
-E = TypeVar('E')
-Fail = Union[None, E]
+class DuplicateResultError(Error):
+    def __init__(self, message: str, result: Match):
+        super().__init__(message)
+        self.result = result

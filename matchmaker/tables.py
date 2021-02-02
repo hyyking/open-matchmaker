@@ -44,7 +44,9 @@ class Player(Table, Insertable, Loadable):
         return cond
     
     @staticmethod
-    def validate(player: "Player") -> bool:
+    def validate(player: Optional["Player"]) -> bool:
+        if player is None:
+            return False
         return player.discord_id != 0
 
     @classmethod
@@ -81,7 +83,9 @@ class Round(Table, Insertable, Loadable):
         return "turn"
 
     @staticmethod
-    def validate(round: "Round") -> bool:
+    def validate(round: Optional["Round"]) -> bool:
+        if round is None:
+            return False
         return round.round_id != 0
 
     def match_conditions(self) -> Optional[Conditional]:
@@ -131,7 +135,9 @@ class Team(Table, Insertable, Loadable):
         return hash(self.team_id)
     
     @staticmethod
-    def validate(team: "Team") -> bool:
+    def validate(team: Optional["Team"]) -> bool:
+        if team is None:
+            return False
         return team.team_id != 0 and Player.validate(team.player_one) and Player.validate(team.player_two)
     
     @property
@@ -196,7 +202,9 @@ class Result(Table, Insertable, Loadable):
     delta: Optional[float] = field(default=0.0)
 
     @staticmethod
-    def validate(result: "Result") -> bool:
+    def validate(result: Optional["Result"]) -> bool:
+        if result is None:
+            return False
         return result.result_id != 0 and Team.validate(result.team)
 
     def __add__(self, other):
@@ -259,7 +267,9 @@ class Match(Table, Insertable, Loadable):
         return Eq("match_id", self.match_id)
 
     @staticmethod
-    def validate(match: "Match") -> bool:
+    def validate(match: Optional["Match"]) -> bool:
+        if match is None:
+            return False
         return match.match_id != 0 and Result.validate(match.team_one) and Result.validate(match.team_two)
 
     def has_result(self, result: Result) -> int:

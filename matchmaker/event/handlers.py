@@ -74,7 +74,7 @@ class GameEndHandler(EventHandler):
         return 1
 
     def is_ready(self, ctx: EventContext) -> bool:
-        if ctx.context.key not in self.games:
+        if not isinstance(ctx.context, InGameContext) or ctx.context.key not in self.games:
             return False
         return ctx.context.is_complete()
     

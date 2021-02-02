@@ -1,7 +1,8 @@
 import unittest
 
 from matchmaker.tables import Player, Team, Round
-from matchmaker.mm.error import QueueError, DequeueError
+from matchmaker.error import Error
+
 from matchmaker.mm.context import QueueContext
 
 class QueueContextTest(unittest.TestCase):
@@ -20,35 +21,35 @@ class QueueContextTest(unittest.TestCase):
 
     def test_queue(self):
         self.ctx.clear()
-        assert not isinstance(self.ctx.queue_team(self.t1), QueueError)
-        assert not isinstance(self.ctx.queue_team(self.t2), QueueError)
+        assert not isinstance(self.ctx.queue_team(self.t1), Error)
+        assert not isinstance(self.ctx.queue_team(self.t2), Error)
         assert self.ctx[self.t1] is not None
         assert self.ctx[self.t2] is not None
     
     def test_queue_twice(self):
         self.ctx.clear()
-        assert not isinstance(self.ctx.queue_team(self.t1), QueueError)
-        assert isinstance(self.ctx.queue_team(self.t1), QueueError)
+        assert not isinstance(self.ctx.queue_team(self.t1), Error)
+        assert isinstance(self.ctx.queue_team(self.t1), Error)
         assert self.ctx[self.t1] is not None
 
     def test_player_already_present(self):
         self.ctx.players = {self.p1, self.p2}
         self.ctx.queue = [self.t1]
-        assert isinstance(self.ctx.queue_team(self.t3), QueueError)
+        assert isinstance(self.ctx.queue_team(self.t3), Error)
         assert self.ctx[self.t1] is not None
         assert self.ctx[self.t3] is None
 
     def test_dequeue(self):
         self.ctx.players = {self.p1, self.p2, self.p3, self.p4}
         self.ctx.queue = [self.t1, self.t2]
-        assert not isinstance(self.ctx.dequeue_team(self.t1), DequeueError)
-        assert not isinstance(self.ctx.dequeue_team(self.t2), DequeueError)
+        assert not isinstance(self.ctx.dequeue_team(self.t1), Error)
+        assert not isinstance(self.ctx.dequeue_team(self.t2), Error)
         assert self.ctx[self.t1] is None
         assert self.ctx[self.t2] is None
     
     def test_dequeue_not_queued(self):
         self.ctx.players = {self.p1, self.p2, self.p3, self.p4}
         self.ctx.queue = [self.t1, self.t2]
-        assert isinstance(self.ctx.dequeue_team(self.t3), DequeueError)
+        assert isinstance(self.ctx.dequeue_team(self.t3), Error)
         assert self.ctx[self.t1] is not None
         assert self.ctx[self.t2] is not None

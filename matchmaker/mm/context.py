@@ -2,8 +2,9 @@ from typing import Set, List, Optional
 import logging
 from enum import Enum
 
-from .error import Fail, QueueError, DequeueError, ResultError
+from .error import MissingFieldsError, AlreadyQueuedError, NotQueuedError, GameEndedError, DuplicateResultError
 from ..tables import Player, Team, Match, Result, Round, Index
+from ..error import Failable
 
 __all__ = ("QueueContext", "InGameContext", "InGameState")
 
@@ -28,6 +29,7 @@ class QueueContext:
         if isinstance(index, Player) and Player.validate(index):
             return self.get_team_player(index)
         elif isinstance(index, Team) and Team.validate(index):
+            assert index.player_one is not None and index.player_two is not None
             p1 = self.get_team_player(index.player_one)
             p2 = self.get_team_player(index.player_two)
             if p1 != p2:
@@ -35,6 +37,10 @@ class QueueContext:
             else:
                 return p1
         elif isinstance(index, Match) and Match.validate(index):
+            assert index.team_one is not None
+            assert index.team_two is not None
+            assert index.team_one.team is not None
+            assert index.team_two.team is not None
             t1 = self[index.team_one.team]
             if t1 is not None:
                 return t1
@@ -61,23 +67,30 @@ class QueueContext:
                 return team
         return None
 
-    def queue_team(self, team: Team) -> Fail[QueueError]:
+    def queue_team(self, team: Team) -> Failable:
         if not Team.validate(team):
-            return QueueError("Missing player fields when queuing team", team)
-        elif self[team.player_one] is not None or self[team.player_two] is not None:
-            return QueueError("Players are already queued", team)
+            return MissingFieldsError("Missing player fields when queuing team", team)
+
+        assert team.player_one is not None
+        assert team.player_two is not None
+        
+        if self[team.player_one] is not None or self[team.player_two] is not None:
+            return AlreadyQueuedError("Players are already queued", team)
 
         self.players.add(team.player_one)
         self.players.add(team.player_two)
         self.queue.append(team)
         return None
 
-    def dequeue_team(self, team: Team) -> Fail[DequeueError]:
+    def dequeue_team(self, team: Team) -> Failable:
         if not Team.validate(team):
-            return DequeueError("Missing player fields when dequeuing team", team)
+            return MissingFieldsError("Missing player fields when dequeuing team", team)
         elif self[team] is None:
-            return DequeueError("Team is not queued", team)
-
+            return NotQueuedError("Team is not queued", team)
+        
+        assert team.player_one is not None
+        assert team.player_two is not None
+        
         self.players.remove(team.player_one)
         self.players.remove(team.player_two)
         self.queue.remove(team)
@@ -86,10 +99,6 @@ class QueueContext:
 class InGameState(Enum):
     INGAME = 0
     ENDED = 1
-
-
-def inv_result(result: Result):
-    return result.team_one is None or result.team_two is None or result.team_one.team is None or result.team_two.team is None or result.team_one.team.team_id == 0 or result.team_two.team.team_id == 0
 
 class InGameContext:
     round: Round
@@ -106,18 +115,25 @@ class InGameContext:
         self.key = hash(round.round_id)
 
     def __repr__(self):
-        matches = ", ".join(map(lambda m: f"Match({m.match_id}, {m.team_one.team.team_id}, {m.team_two.team.team_id})", self.matches))
-        return f"InGameContext[{self.state} | {self.round.round_id}]([{matches}], {self.results})"
+        return f"InGameContext(state={self.state}, round_id={self.round.round_id})"
 
 
     def __getitem__(self, index: Index) -> Optional[Match]:
         if isinstance(index, Player) and Player.validate(index):
             return self.get_match_player(index)
         elif isinstance(index, Team) and Team.validate(index):
-            assert index.player_one is not None or index.player_two is not None
-            player = index.player_one if index.player_one is None else index.player_two
-            return self.get_match_player(player)
+            assert index.player_one is not None and index.player_two is not None
+            p1 = self.get_match_player(index.player_one)
+            p2 = self.get_match_player(index.player_two)
+            if p1 != p2:
+                return None
+            else:
+                return p1
         elif isinstance(index, Match) and Match.validate(index):
+            assert index.team_one is not None
+            assert index.team_two is not None
+            assert index.team_one.team is not None
+            assert index.team_two.team is not None
             t1 = self[index.team_one.team]
             if t1 is not None:
                 return t1
@@ -143,23 +159,29 @@ class InGameContext:
                 return match
         return None
 
-    def add_result(self, result: Match) -> Fail[ResultError]:
+    def add_result(self, result: Match) -> Failable:
         if self.state is InGameState.ENDED:
-            return ResultError("Game has already ended", result)
-        elif inv_result(result):
-            return ResultError("Result is invalid, check for None fields", result)
+            return GameEndedError("Game has already ended", result)
+        elif not Match.validate(result):
+            return MissingFieldsError("Match is invalid, check for None fields", result)
+
+        r1 = result.team_one
+        r2 = result.team_two
+        assert r1 is not None
+        assert r2 is not None
+        assert r1.team is not None
+        assert r2.team is not None
+        
+        if r1.team in self.results or r2.team in self.results:
+            return DuplicateResultError("Result is already in the context", result)
 
         for match in self.matches:
             if match == result:
-                r1 = result.team_one
-                r2 = result.team_two
-                if r1.team in self.results or r2.team in self.results:
-                    return False
-                self.results.add(r1)
-                self.results.add(r2)
+                self.results.add(r1.team)
+                self.results.add(r2.team)
                 match.team_one = r1
                 match.team_two = r2
                 if len(self.results) == 2 * len(self.matches):
                     self.state = InGameState.ENDED
-                return True
-        return False
+                return None
+        return None

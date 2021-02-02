@@ -2,10 +2,10 @@ import unittest
 
 from matchmaker.mm.games import Games
 from matchmaker.mm.context import QueueContext, InGameContext
-from matchmaker.mm.error import ResultError
 from matchmaker.mm import Config
 
 from matchmaker.tables import Player, Team, Round, Match, Result
+from matchmaker.error import Error
 
 from matchmaker.event.handlers import MatchTriggerHandler, GameEndHandler
 from matchmaker.event.events import ResultEvent, QueueEvent
@@ -48,7 +48,6 @@ class GameEndHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.round = Round(round_id=1)
-        cls.qctx = QueueContext(cls.round)
         
         cls.t1 = Team(team_id=42, elo=1000, player_one=Player(discord_id=1), player_two=Player(discord_id=2))
         cls.t2 = Team(team_id=69, elo=1000, player_one=Player(discord_id=3), player_two=Player(discord_id=4))
@@ -72,7 +71,7 @@ class GameEndHandlerTest(unittest.TestCase):
         )
 
         ctx = self.games.add_result(m)
-        assert not isinstance(ctx, ResultError)
+        assert not isinstance(ctx, Error)
         assert ctx == 1
 
         assert self.games[1].is_complete()

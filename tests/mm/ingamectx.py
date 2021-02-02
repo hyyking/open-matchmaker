@@ -1,7 +1,8 @@
 import unittest
 
 from matchmaker.tables import Player, Team, Round, Result, Match
-from matchmaker.mm.error import QueueError, DequeueError
+from matchmaker.error import Error
+
 from matchmaker.mm.context import InGameContext
 
 class InGameContextTest(unittest.TestCase):

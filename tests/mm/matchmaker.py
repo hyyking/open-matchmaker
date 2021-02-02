@@ -3,7 +3,6 @@ import unittest
 
 from matchmaker import MatchMaker, Database, Config
 from matchmaker.tables import Player, Team, Round
-from matchmaker.mm.error import QueueError, DequeueError
 
 class MatchMakerTest(unittest.TestCase):
     @classmethod
