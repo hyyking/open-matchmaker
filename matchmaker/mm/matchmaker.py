@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 
 from .principal import get_principal
 from .context import QueueContext, InGameContext
 from .config import Config
 from .games import Games
+from .error import Fail, QueueError, DequeueError, ResultError
 
 from ..event import EventMap
 from ..event.events import QueueEvent, DequeueEvent, ResultEvent
@@ -52,34 +53,37 @@ class MatchMaker:
         self.games.clear()
         self.logger.info(f"cleared queue and games")
     
-    def queue_team(self, team: Team) -> bool:
-        if not self.qctx.queue_team(team):
-            return False
+    def queue_team(self, team: Team) -> Fail[Union[QueueError, HandlingError]]:
+        err = self.qctx.queue_team(team)
+        if isinstance(err, QueueError):
+            return err
 
         err = self.evmap.handle(QueueEvent(self.db, self.qctx, team))
         if isinstance(err, HandlingError):
-            return False
+            return err
         
         self.logger.info(f"queued ({team.team_id}) {team.name}")
-        return True
+        return None
     
-    def dequeue_team(self, team: Team) -> bool:
-        if not self.qctx.dequeue_team(team):
-            return False
+    def dequeue_team(self, team: Team) -> Fail[Union[DequeueError, HandlingError]]:
+        err = self.qctx.dequeue_team(team)
+        if isinstance(err, DequeueError):
+            return err
+
         err = self.evmap.handle(DequeueEvent(self.db, self.qctx, team))
         if isinstance(err, HandlingError):
-            return False
+            return err
         
         self.logger.info(f"dequeued ({team.team_id}) {team.name}")
-        return True
+        return None
 
-    def handle_result(self, match: Match) -> bool:
+    def insert_result(self, match: Match) -> Fail[Union[ResultError, HandlingError]]:
         key = self.games.handle_result(match)
-        if key is None:
-            return False
+        if isinstance(err, ResultError):
+            return err
 
         err = self.evmap.handle(ResultEvent(self.db, self.games[key], match))
         if isinstance(err, HandlingError):
-            return False
+            return err
         self.logger.info(f"handled result for match {match}")
-        return True 
+        return None

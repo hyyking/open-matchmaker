@@ -4,6 +4,7 @@ from ..mm.context import InGameContext, QueueContext
 from ..mm.games import Games
 from ..mm.config import Config
 from ..mm.principal import get_principal
+from ..mm.error import GameAlreadyExistError
 from ..tables import Match, Round
 
 from .event import EventHandler, EventKind, EventContext
@@ -52,8 +53,9 @@ class MatchTriggerHandler(EventHandler):
         ctx.context.clear()
         assert ctx.context.is_empty()
 
-        if not self.games.push_game(context):
-            return HandlingError("Unable to push game to context", self)
+        err = self.games.push_game(context)
+        if isinstance(err, GameAlreadyExistError):
+            return HandlingError(f"Unable to push game to context: {err.message}", self)
 
         ctx.context.round.round_id += 1
         return None

@@ -6,6 +6,7 @@ from typing import List, Iterator, Tuple
 
 from .config import Config
 from .context import QueueContext, InGameContext
+
 from ..tables import Match, Round, Team, Result
 
 def filter_matches(matches: Tuple[Match, ...]) -> bool:

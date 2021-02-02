@@ -2,7 +2,8 @@ from typing import Set, List, Optional
 import logging
 from enum import Enum
 
-from ..tables import Player, Team, Match, Result, Round
+from .error import Fail, QueueError, DequeueError, ResultError
+from ..tables import Player, Team, Match, Result, Round, Index
 
 __all__ = ("QueueContext", "InGameContext", "InGameState")
 
@@ -43,27 +44,27 @@ class QueueContext:
                 return team
         return None
 
-    def queue_team(self, team: Team) -> bool:
+    def queue_team(self, team: Team) -> Fail[QueueError]:
         if team.player_one is None or team.player_two is None:
-            return False
-        if self.has_player(team.player_one) or self.has_player(team.player_two):
-            return False
+            return QueueError("Missing player fields when queuing team", team)
+        elif self.has_player(team.player_one) or self.has_player(team.player_two):
+            return QueueError("Players are already queued", team)
 
         self.players.add(team.player_one)
         self.players.add(team.player_two)
         self.queue.append(team)
-        return True
+        return None
 
-    def dequeue_team(self, team: Team) -> bool:
+    def dequeue_team(self, team: Team) -> Fail[DequeueError]:
         if team.player_one is None or team.player_two is None:
-            return False
-        if not self.has_team(team):
-            return False
+            return DequeueError("Missing player fields when dequeuing team", team)
+        elif not self.has_team(team):
+            return DequeueError("Team is not queued", team)
         
         self.players.remove(team.player_one)
         self.players.remove(team.player_two)
         self.queue.remove(team)
-        return True
+        return none
 
 class InGameState(Enum):
     INGAME = 0
@@ -92,31 +93,44 @@ class InGameContext:
         return f"InGameContext[{self.state} | {self.round.round_id}]([{matches}], {self.results})"
 
 
-    def has_player(self, player: Player) -> bool:
+    def __getitem__(self, index: Index) -> Optional[Match]:
+        if isinstance(index, Player) and Player.validate(index):
+            return self.get_match_player(index)
+        elif isinstance(index, Team) and Team.validate(index):
+            assert index.player_one is not None or index.player_two is not None
+            player = index.player_one if index.player_one is None else index.player_two
+            return self.get_match_player(player)
+        elif isinstance(index, Match) and Match.validate(index):
+            t1 = self[index.team_one.team]
+            if t1 is not None:
+                return t1
+            t2 = self[index.team_two.team]
+            if t2 is not None:
+                return t2
+            return None
+        else:
+            raise KeyError("Invalid index, use tuple of team, player, match or context key")
+
+
+    def is_complete(self) -> bool:
+        return self.state is InGameState.ENDED
+
+    def get_match_player(self, player: Player) -> Optional[Match]:
         for match in self.matches:
             assert match.team_one is not None
             assert match.team_two is not None
             assert match.team_one.team is not None
             assert match.team_two.team is not None
 
-            if match.team_one.team.has_player(player):
-                return True
-            elif match.team_two.team.has_player(player):
-                return True
-        return False
+            if match.team_one.team.has_player(player) or match.team_two.team.has_player(player):
+                return match
+        return None
 
-    def has_team(self, team: Team) -> bool:
-        for match in self.matches:
-            if match.has_team(team) != 0:
-                return True
-        return False
-
-    def is_complete(self):
-        return self.state is InGameState.ENDED
-
-    def add_result(self, result: Match) -> bool:
-        if inv_result(result) or self.state is InGameState.ENDED:
-            return False
+    def add_result(self, result: Match) -> Fail[ResultError]:
+        if self.state is InGameState.ENDED:
+            return ResultError("Game has already ended", result)
+        elif inv_result(result):
+            return ResultError("Result is invalid, check for None fields", result)
 
         for match in self.matches:
             if match == result:

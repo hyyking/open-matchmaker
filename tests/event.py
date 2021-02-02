@@ -12,6 +12,7 @@ from matchmaker.event.handlers import MatchTriggerHandler, InGameEndHandler
 from matchmaker.mm.context import QueueContext, InGameContext
 from matchmaker.mm.config import Config
 from matchmaker.mm.games import Games
+from matchmaker.mm.error import QueueError, DequeueError, ResultError
 
 from matchmaker.tables import Team, Result, Match, Round, Player
 from matchmaker import Database
@@ -123,10 +124,10 @@ class QueueEvents(unittest.TestCase):
         t1 = Team(team_id=42, elo=1000, player_one=Player(discord_id=1), player_two=Player(discord_id=2))
         t2 = Team(team_id=69, elo=1000, player_one=Player(discord_id=3), player_two=Player(discord_id=4))
 
-        assert self.qctx.queue_team(t1)
+        assert not isinstance(self.qctx.queue_team(t1), QueueError)
         q1 = QueueEvent(self.qctx, t1)
         assert not isinstance(evmap.handle(q1), HandlingError)
-        assert self.qctx.queue_team(t2)
+        assert not isinstance(self.qctx.queue_team(t2), QueueError)
         q2 = QueueEvent(self.qctx, t2)
         assert not isinstance(evmap.handle(q2), HandlingError)
 
@@ -137,25 +138,31 @@ class QueueEvents(unittest.TestCase):
         self.games.clear()
         self.qctx.clear()
 
-        self.games = Games({
-            self.round.round_id: InGameContext(self.round, [Match(match_id=1, round=self.round)])
-        })
-        evmap = EventMap.new()
-        evmap.register(InGameEndHandler(self.games))
-
         t1 = Team(team_id=42, elo=1000, player_one=Player(discord_id=1), player_two=Player(discord_id=2))
         t2 = Team(team_id=69, elo=1000, player_one=Player(discord_id=3), player_two=Player(discord_id=4))
-        
-        result1 = Result(result_id=0, team=t1, points=3, delta=-1)
-        result2 = Result(result_id=1, team=t2, points=7, delta=1)
+
         m = Match(
             match_id=1,
             round=self.round,
-            team_one=result1,
-            team_two=result2
+            team_one=Result(result_id=1, team=t1),
+            team_two=Result(result_id=2, team=t2)
+        )
+        self.games = Games({self.round.round_id: InGameContext(self.round, [m])})
+        evmap = EventMap.new()
+        evmap.register(InGameEndHandler(self.games))
+
+        
+        m = Match(
+            match_id=1,
+            round=self.round,
+            team_one=Result(result_id=1, team=t1, points=3, delta=-1),
+            team_two=Result(result_id=2, team=t2, points=7, delta=1)
         )
 
-        assert self.games.add_result(m) == 1
+        ctx = self.games.add_result(m)
+        assert not isinstance(ctx, ResultError)
+        assert ctx == 1
+
         assert self.games[1].is_complete()
 
         e = ResultEvent(self.games[1], m)

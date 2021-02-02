@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from .operations import Table, Insertable, Loadable
 from .template import (
@@ -21,7 +21,8 @@ from .template import (
 from .db import Database
 
 
-__all__ = ("Player", "Team", "Round", "Match", "Result")
+__all__ = ("Player", "Team", "Round", "Match", "Result", "Index")
+
 
 @dataclass(eq=False)
 class Player(Table, Insertable, Loadable):
@@ -41,6 +42,10 @@ class Player(Table, Insertable, Loadable):
             eq = Eq("name", self.name)
             cond = eq if cond is None else And(eq, cond) # type: ignore
         return cond
+    
+    @staticmethod
+    def validate(player: "Player") -> bool:
+        return player.discord_id != 0
 
     @classmethod
     def load_from(cls, conn: Database, rhs: "Player") -> Optional["Player"]:
@@ -74,6 +79,10 @@ class Round(Table, Insertable, Loadable):
     @property
     def table(self) -> str:
         return "turn"
+
+    @staticmethod
+    def validate(round: "Round") -> bool:
+        return round.round_id != 0
 
     def match_conditions(self) -> Optional[Conditional]:
         if self.round_id == 0:
@@ -120,6 +129,10 @@ class Team(Table, Insertable, Loadable):
 
     def __hash__(self):
         return hash(self.team_id)
+    
+    @staticmethod
+    def validate(team: "Team") -> bool:
+        return team.team_id != 0 and Player.validate(team.player_one) and Player.validate(team.player_two)
     
     @property
     def table(self) -> str:
@@ -182,6 +195,10 @@ class Result(Table, Insertable, Loadable):
     points: Optional[int] = field(default=0)
     delta: Optional[float] = field(default=0.0)
 
+    @staticmethod
+    def validate(result: "Result") -> bool:
+        return result.result_id != 0 and Team.validate(result.team)
+
     def __add__(self, other):
         assert self.team == other.team
         return Result(self.team, self.points + other.points, self.delta + other.delta)
@@ -240,6 +257,10 @@ class Match(Table, Insertable, Loadable):
         if self.match_id == 0:
             return None
         return Eq("match_id", self.match_id)
+
+    @staticmethod
+    def validate(match: "Match") -> bool:
+        return match.match_id != 0 and Result.validate(match.team_one) and Result.validate(match.team_two)
 
     def has_result(self, result: Result) -> int:
         if result.team is None:
@@ -356,3 +377,5 @@ class Match(Table, Insertable, Loadable):
                 self.odds_ratio
             ))
         )
+
+Index = Union[Player, Team, Match, int]
