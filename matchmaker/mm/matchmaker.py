@@ -37,10 +37,10 @@ class MatchMaker:
         self.logger.info(f"MatchMaker initialized at round: {base_round.round_id}")
 
     def has_queued_player(self, player: Player) -> bool:
-        return self.qctx.has_player(player) or self.games.has_player(player)
+        return self.qctx[player] is not None or self.game[player] is not None
 
     def has_queued_team(self, team: Team) -> bool:
-        return self.qctx.has_team(team) or self.games.has_team(team)
+        return self.qctx[team] is not None or self.games[team] is not None
 
     def get_team_of_player(self, player: Player) -> Optional[Team]:
         queue = self.qctx.get_team_of_player(player)
@@ -58,7 +58,7 @@ class MatchMaker:
         if isinstance(err, QueueError):
             return err
 
-        err = self.evmap.handle(QueueEvent(self.db, self.qctx, team))
+        err = self.evmap.handle(QueueEvent(self.qctx, team))
         if isinstance(err, HandlingError):
             return err
         
@@ -70,7 +70,7 @@ class MatchMaker:
         if isinstance(err, DequeueError):
             return err
 
-        err = self.evmap.handle(DequeueEvent(self.db, self.qctx, team))
+        err = self.evmap.handle(DequeueEvent(self.qctx, team))
         if isinstance(err, HandlingError):
             return err
         

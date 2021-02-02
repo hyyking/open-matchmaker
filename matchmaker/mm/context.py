@@ -22,20 +22,37 @@ class QueueContext:
     def __len__(self) -> int:
         return len(self.queue)
 
+    def __getitem__(self, index: Index) -> Optional[Team]:
+        if isinstance(index, int):
+            return self.queue[index]
+        if isinstance(index, Player) and Player.validate(index):
+            return self.get_team_player(index)
+        elif isinstance(index, Team) and Team.validate(index):
+            p1 = self.get_team_player(index.player_one)
+            p2 = self.get_team_player(index.player_two)
+            if p1 != p2:
+                return None
+            else:
+                return p1
+        elif isinstance(index, Match) and Match.validate(index):
+            t1 = self[index.team_one.team]
+            if t1 is not None:
+                return t1
+            t2 = self[index.team_two.team]
+            if t2 is not None:
+                return t2
+            return None
+        else:
+            raise KeyError("Invalid index, use tuple of team, player, match or context key")
+
     def clear(self):
         self.players.clear()
         self.queue.clear()
     
     def is_empty(self) -> bool:
         return len(self.players) == 0 and len(self.queue) == 0
-
-    def has_player(self, player: Player) -> bool:
-        return player in self.players
-
-    def has_team(self, team: Team) -> bool:
-        return team in self.queue
-    
-    def get_team_of_player(self, player: Player) -> Optional[Team]:
+ 
+    def get_team_player(self, player: Player) -> Optional[Team]:
         if player not in self.players:
             return None
 
@@ -45,9 +62,9 @@ class QueueContext:
         return None
 
     def queue_team(self, team: Team) -> Fail[QueueError]:
-        if team.player_one is None or team.player_two is None:
+        if not Team.validate(team):
             return QueueError("Missing player fields when queuing team", team)
-        elif self.has_player(team.player_one) or self.has_player(team.player_two):
+        elif self[team.player_one] is not None or self[team.player_two] is not None:
             return QueueError("Players are already queued", team)
 
         self.players.add(team.player_one)
@@ -56,15 +73,15 @@ class QueueContext:
         return None
 
     def dequeue_team(self, team: Team) -> Fail[DequeueError]:
-        if team.player_one is None or team.player_two is None:
+        if not Team.validate(team):
             return DequeueError("Missing player fields when dequeuing team", team)
-        elif not self.has_team(team):
+        elif self[team] is None:
             return DequeueError("Team is not queued", team)
-        
+
         self.players.remove(team.player_one)
         self.players.remove(team.player_two)
         self.queue.remove(team)
-        return none
+        return None
 
 class InGameState(Enum):
     INGAME = 0
