@@ -148,18 +148,11 @@ class ResultEvents(unittest.TestCase):
         evmap = EventMap.new()
         evmap.register(
             EventKind.RESULT,
-            EqHandler(tag=1, key="result", expect=Result(result_id=69))
-        )
-        evmap.register(
-            EventKind.RESULT,
             EqHandler(tag=2, key="match", expect=Match(match_id=42))
         )
-        qe = ResultEvent(self.db, self.igctx, Match(match_id=42), Result(result_id=69))
+        qe = ResultEvent(self.db, self.igctx, Match(match_id=42))
 
         ready = evmap.poll(qe)
-        handler = next(ready)
-        assert handler is not None
-        assert handler.tag == 1
         handler = next(ready)
         assert handler.tag == 2
         assert next(ready, None) is None

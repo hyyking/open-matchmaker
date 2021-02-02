@@ -1,5 +1,5 @@
-
 import logging
+from datetime import datetime
 from typing import List, Optional, Dict
 
 from .principal import get_principal
@@ -21,7 +21,7 @@ class Games(Dict[int, InGameContext]):
         self[context.key] = context
         return True
     
-    def handle_result(self, result: Result) -> Optional[int]:
+    def handle_result(self, match: Match) -> Optional[int]:
         raise NotImplementedError("Game.handle_result")
 
     def has_player(self, player: Player) -> bool:
@@ -35,6 +35,10 @@ class Games(Dict[int, InGameContext]):
             if context.has_team(team):
                 return True
         return False
+
+    def get_team_of_player(self, player: Player) -> Optional[Team]:
+        raise NotImplementedError("Game.get_team_of_player")
+
 
 
 class MatchMaker:
@@ -57,7 +61,7 @@ class MatchMaker:
     def has_queued_team(self, team: Team) -> bool:
         return self.qctx.has_team(team) or self.games.has_team(team)
 
-    def get_team_of_player(self, player: Player) -> Optional[Player]:
+    def get_team_of_player(self, player: Player) -> Optional[Team]:
         queue = self.qctx.get_team_of_player(player)
         if queue is not None:
             return queue
@@ -88,15 +92,16 @@ class MatchMaker:
         self.logger.info(f"dequeued ({team.team_id}) {team.name}")
         return True
 
-    def handle_result(self, result: Result) -> bool:
-        key = self.games.handle_result(result)
+    def handle_result(self, match: Match) -> bool:
+        key = self.games.handle_result(match)
         if key is None:
             return False
 
-        err = self.evmap.handle(ResultEvent(self.db, self.games[key], team))
+        err = self.evmap.handle(ResultEvent(self.db, self.games[key], match))
         if isinstance(err, HandlingError):
             return False
-        self.logger.info(f"handled result {result}")
+        self.logger.info(f"handled result for match {match}")
+        return True
     
     def make_matches(self) -> InGameContext:
         r = Round(

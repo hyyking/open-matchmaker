@@ -134,8 +134,8 @@ class Team(Table, Insertable, Loadable):
             eq = Eq("team_name", self.name)
             cond = eq if cond is None else And(eq, cond) # type: ignore
         if self.player_one is not None and self.player_two is not None:
-            cond1 = self.player_one.match_conds()
-            cond2 = self.player_two.match_conds()
+            cond1 = self.player_one.match_conditions()
+            cond2 = self.player_two.match_conditions()
             if cond1 is None or cond2 is None:
                 return cond
             joined = And(cond1, cond2)
@@ -242,15 +242,19 @@ class Match(Table, Insertable, Loadable):
         return Eq("match_id", self.match_id)
 
     def has_result(self, result: Result) -> int:
-        """ 0 if not, 1 if result of team 1, 2 if result of team 2 """
-        no_t1 = self.team_one is None or self.team_one.team is None
-        no_t2 = self.team_two is None or self.team_two.team is None
         if result.team is None:
             return 0
+        return self.has_team(result.team)
 
-        if not no_t1 and self.team_one.team == result.team:
+    def has_team(self, team: Team) -> int:
+        """ 0 if not, 1 if result of team 1, 2 if result of team 2 """
+        if self.team_one is None or self.team_one.team is None:
+            return 0
+        elif self.team_two is None or self.team_two.team is None:
+            return 0
+        elif self.team_one.team == team:
             return 1
-        elif not no_t2 and self.team_two.team == result.team:
+        elif self.team_two.team == team:
             return 2
         else:
             return 0
@@ -262,7 +266,33 @@ class Match(Table, Insertable, Loadable):
             return None
 
         query = ColumnQuery(QueryKind.SELECT, rhs.table,
-            ["match.match_id", "match.odds_ratio", "res1.*", "res2.*", "turn.*"],
+            ["match.match_id", "match.odds_ratio",
+             
+             "res1.team_id", # 2
+             "res1.team_name",
+             "res1.player_one_id",
+             "res1.player_one_name",
+             "res1.player_two_id",
+             "res1.player_two_name", # 7
+             "res1.result_id", 
+             "res1.points",
+             "res1.delta", # 10,
+             
+             "res2.team_id", # 11
+             "res2.team_name",
+             "res2.player_one_id",
+             "res2.player_one_name",
+             "res2.player_two_id",
+             "res2.player_two_name",
+             "res2.result_id", # 17
+             "res2.points",
+             "res2.delta", # 19
+            
+             "turn.round_id", # 20
+             "turn.start_time",
+             "turn.end_time",
+             "turn.participants" # 23
+            ],
             [
                 InnerJoin(
                     Alias("result_with_team_details", "res1"),
@@ -284,22 +314,35 @@ class Match(Table, Insertable, Loadable):
         match_id, odds_ratio = result[:2]
         
         t1id, t1name, t1p1id, t1p1name, t1p2id, t1p2name = result[2:8]
-        t2id, t2name, t2p1id, t2p1name, t2p2id, t2p2name = result[8:14]
-        
-        p11 = Player(discord_id=t1p1id, name=t1p1name)
-        p12 = Player(discord_id=t1p2id, name=t1p2name)
-        t1 = Team(team_id=t1id, name=t1name, player_one=p11, player_two=p12)
+        res1_id, res1_points, res1_delta = result[8:11]
+        r1 = Result(
+            result_id=res1_id,
+            team=Team(
+                team_id=t1id,
+                name=t1name,
+                player_one=Player(discord_id=t1p1id, name=t1p1name),
+                player_two=Player(discord_id=t1p2id, name=t1p2name)
+            )
+        )
 
-        p21 = Player(discord_id=t2p1id, name=t2p1name)
-        p22 = Player(discord_id=t2p2id, name=t2p2name)
-        t2 = Team(team_id=t2id, name=t2name, player_one=p21, player_two=p22)
+        t2id, t2name, t2p1id, t2p1name, t2p2id, t2p2name = result[11:17]
+        res2_id, res2_points, res2_delta = result[17:20]
+        r2 = Result(
+            result_id=res2_id,
+            team=Team(
+                team_id=t2id,
+                name=t1name,
+                player_one=Player(discord_id=t2p1id, name=t2p1name),
+                player_two=Player(discord_id=t2p2id, name=t2p2name)
+            )
+        )
 
-        round = Round(*result[14:18])
+        round = Round(*result[20:24])
         return cls(
             match_id=match_id,
             round=round,
-            team_one=t1,
-            team_two=t2,
+            team_one=r1,
+            team_two=r2,
             odds_ratio=odds_ratio
         )
     

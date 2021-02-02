@@ -34,11 +34,11 @@ class Database:
         """ insert to the database, returns False on failure """
         return self.execute(query.as_insert_query(), title) is not None
 
-    def exists(self, query: Table, title: str = "ExistQuery") -> bool:
-        conds = query.match_conditions()
+    def exists(self, table: Table, title: str = "ExistQuery") -> bool:
+        conds = table.match_conditions()
         if conds is None:
             return False
-        query = ColumnQuery(QueryKind.EXISTS, query.table, "1", Where(conds))
+        query = ColumnQuery(QueryKind.EXISTS, table.table, "1", Where(conds))
         q = self.execute(query, title)
         return q is None or q.fetchone()[0] == 1
 

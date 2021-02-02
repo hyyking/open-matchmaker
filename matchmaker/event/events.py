@@ -7,8 +7,8 @@ from ..tables import Team, Result, Player, Match, Round
 
 @dataclass
 class QueueEvent(Event):
-    context: QueueContext
     db: Database
+    context: QueueContext
     team: Team
 
     @property
@@ -26,8 +26,8 @@ class QueueEvent(Event):
 
 @dataclass
 class DequeueEvent(Event):
-    context: QueueContext
     db: Database
+    context: QueueContext
     team: Team
     
     @property
@@ -47,7 +47,6 @@ class ResultEvent(Event):
     db: Database
     context: InGameContext
     match: Match
-    result: Result
     
     @property
     def kind(self) -> EventKind:
@@ -59,7 +58,6 @@ class ResultEvent(Event):
             db=self.db,
             context=self.context,
             match=self.match,
-            result=self.result
         )
 
 @dataclass

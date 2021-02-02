@@ -11,12 +11,12 @@ class AsStatement(abc.ABC):
 
 Statement = Union[str, int, AsStatement]
 
-def render_statement(s: Statement) -> Statement:
+def render_statement(s: Statement) -> str:
     """ removes AsStatement type of union """
     if isinstance(s, AsStatement):
         return s.render()
     else: 
-        return s
+        return str(s)
 
 class QueryKind(Enum):
     NONE = 0

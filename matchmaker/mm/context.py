@@ -70,10 +70,31 @@ class InGameContext:
 
         self.key = hash(round.round_id)
 
+
+    def has_player(self, player: Player) -> bool:
+        for match in self.matches:
+            assert match.team_one is not None
+            assert match.team_two is not None
+            assert match.team_one.team is not None
+            assert match.team_two.team is not None
+
+            if match.team_one.team.has_player(player):
+                return True
+            elif match.team_two.team.has_player(player):
+                return True
+        return False
+
+    def has_team(self, team: Team) -> bool:
+        for match in self.matches:
+            if match.has_team(team) != 0:
+                return True
+        return False
+
     def is_complete(self):
         return 2 * len(results) == len(matches)
 
-    def add_result(self, result: Result) -> bool:
+    def add_result(self, result: Match) -> bool:
+        raise NotImplementedError("InGameContext.add_result")
         for match in self.matches:
             teamindex = match.has_result(result)
             if teamindex == 1:
