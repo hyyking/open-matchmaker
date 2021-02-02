@@ -1,19 +1,26 @@
 from typing import Set, List, Optional
 import logging
 
-from ..tables import Player, Team
+from ..tables import Player, Team, Match, Result, Round
+
+__all__ = ("QueueContext", "InGameContext")
 
 class QueueContext:
     players: Set[Player]
     queue: List[Team]
+    history: List[Match]
 
     def __init__(self):
         self.players = set()
         self.queue = []
 
-        self.logger = logging.getLogger(__name__)
-        self.logger.info(f"Matchmaker context initalized")
+    def clear(self):
+        self.players.clear()
+        self.queue.clear()
     
+    def is_empty(self):
+        return len(self.players) == 0 and len(self.queue) == 0
+
     def has_player(self, player: Player) -> bool:
         return player in self.players
 
@@ -38,7 +45,6 @@ class QueueContext:
         self.players.add(team.player_one)
         self.players.add(team.player_two)
         self.queue.append(team)
-        self.logger.info(f"Queued '{team.name}'")
         return True
 
     def dequeue_team(self, team: Team) -> bool:
@@ -50,8 +56,32 @@ class QueueContext:
         self.players.remove(team.player_one)
         self.players.remove(team.player_two)
         self.queue.remove(team)
-        self.logger.info(f"Dequeued '{team.name}'")
         return True
 
 class InGameContext:
-    pass
+    round: Round
+    results: Set[Result]
+    matches: List[Match]
+
+    def __init__(self, round: Round, matches: List[Match]):
+        self.round = round
+        self.matches = matches
+        self.results = set()
+
+        self.key = hash(round.round_id)
+
+    def is_complete(self):
+        return 2 * len(results) == len(matches)
+
+    def add_result(self, result: Result) -> bool:
+        for match in self.matches:
+            teamindex = match.has_result(result)
+            if teamindex == 1:
+                self.results.add(result)
+                match.team_one = result
+                return True
+            elif teamindex == 2:
+                self.results.add(result)
+                match.team_two = result
+                return True
+        return False

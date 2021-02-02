@@ -32,7 +32,7 @@ class EqHandler(EventHandler):
 
 def setup(cls):
     cls.qctx = QueueContext()
-    cls.igctx = InGameContext()
+    cls.igctx = InGameContext(Round(), [])
     cls.db = Database("tests/empty_mockdb.sqlite3")
 
 class EventMapTest(unittest.TestCase):

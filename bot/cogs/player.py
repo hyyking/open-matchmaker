@@ -56,7 +56,7 @@ class PlayerCog(commands.Cog, BotContext):
             query.kind = QueryKind.SELECT
             cursor = self.db.execute(query, "FetchTeamName")
             assert cursor is not None
-            team_name: str = cursor.fetchone()[0]
+            team_name = cursor.fetchone()[0]
             message = self.bot.fmterr(
                 f"'{current.name}' is already in a team with '{teammate.name}' ('{team_name}')!"
             )
@@ -100,7 +100,7 @@ class PlayerCog(commands.Cog, BotContext):
                 f"'{team.player_one.name}' is queuing in team '{curr.name}'!"
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
-        elif mm.has_queud_player(team.player_two):
+        elif mm.has_queued_player(team.player_two):
             curr = mm.get_team_of_player(team.player_one)
             assert curr is not None
             message = self.bot.fmterr(

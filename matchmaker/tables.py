@@ -230,16 +230,30 @@ class Result(Table, Insertable, Loadable):
 
 @dataclass(eq=False)
 class Match(Table, Insertable, Loadable):
-    match_id: Optional[int] = field(default=None)
+    match_id: int = field(default=0)
     round: Optional[Round] = field(default=None)
     team_one: Optional[Result] = field(default=None)
     team_two: Optional[Result] = field(default=None)
-    odds_ratio: Optional[float] = field(default=1.0)
+    odds_ratio: float = field(default=1.0)
      
     def match_conditions(self) -> Optional[Conditional]:
         if self.match_id == 0:
             return None
         return Eq("match_id", self.match_id)
+
+    def has_result(self, result: Result) -> int:
+        """ 0 if not, 1 if result of team 1, 2 if result of team 2 """
+        no_t1 = self.team_one is None or self.team_one.team is None
+        no_t2 = self.team_two is None or self.team_two.team is None
+        if result.team is None:
+            return 0
+
+        if not no_t1 and self.team_one.team == result.team:
+            return 1
+        elif not no_t2 and self.team_two.team == result.team:
+            return 2
+        else:
+            return 0
 
     @classmethod
     def load_from(cls, conn: Database, rhs: "Match") -> Optional["Match"]:
