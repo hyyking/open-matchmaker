@@ -15,4 +15,6 @@ class Config:
     period: Dict[str, float] = field(default_factory=default_period)
 
     trigger_threshold: int = field(default=10)
+    max_history: int = field(default=3)
+
     principal: str = field(default="max_sum")

@@ -27,11 +27,11 @@ class MatchMaker:
         self.db = database
         self.config = config
 
-        self.qctx = QueueContext(base_round)
+        self.qctx = QueueContext(base_round, config.max_history)
         self.games = Games.new()
 
         self.evmap = EventMap.new()
-        self.evmap.register(MatchTriggerHandler(self.config, self.games))
+        self.evmap.register(MatchTriggerHandler(self.config, self.games, self.evmap))
 
         self.logger.info(f"MatchMaker initialized at round: {base_round.round_id}")
 
@@ -60,11 +60,11 @@ class MatchMaker:
         if isinstance(err, Error):
             return err
 
+        self.logger.info(f"queued ({team.team_id}) {team.name}")
+
         err = self.evmap.handle(QueueEvent(self.qctx, team))
         if isinstance(err, Error):
             return err
-
-        self.logger.info(f"queued ({team.team_id}) {team.name}")
         return None
 
     def dequeue_team(self, team: Team) -> Failable:
@@ -72,20 +72,17 @@ class MatchMaker:
         if isinstance(err, Error):
             return err
 
-        err = self.evmap.handle(DequeueEvent(self.qctx, team))
-        if isinstance(err, Error):
-            return err
-
         self.logger.info(f"dequeued ({team.team_id}) {team.name}")
-        return None
+        return self.evmap.handle(DequeueEvent(self.qctx, team))
 
     def insert_result(self, match: Match) -> Failable:
         key = self.games.add_result(match)
         if isinstance(key, Error):
             return key
 
-        err = self.evmap.handle(ResultEvent(self.games[key], match))
+        err = self.qctx.push_history(match)
         if isinstance(err, Error):
             return err
+
         self.logger.info(f"handled result for match {match}")
-        return None
+        return self.evmap.handle(ResultEvent(self.games[key], match))

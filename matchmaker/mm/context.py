@@ -21,10 +21,12 @@ class QueueContext:
     queue: List[Team]
     history: List[Match]
 
-    def __init__(self, round: Round):
+    def __init__(self, round: Round, history_size: int = 0):
         self.round = round
         self.players = set()
         self.queue = []
+
+        self.history_size = history_size
         self.history = []
 
     def __len__(self) -> int:
@@ -56,9 +58,7 @@ class QueueContext:
                 return t2
             return None
         else:
-            raise KeyError(
-                "Invalid index, use tuple of team, player, match or context key"
-            )
+            raise KeyError("Invalid index, use a team, player, match or and index")
 
     def clear(self):
         self.players.clear()
@@ -103,6 +103,20 @@ class QueueContext:
         self.players.remove(team.player_one)
         self.players.remove(team.player_two)
         self.queue.remove(team)
+        return None
+
+    def push_history(self, match: Match) -> Failable:
+        if not Match.validate(match):
+            return MissingFieldsError(
+                "Missing match fields when adding to history", match
+            )
+
+        if self.history_size == 0:
+            return None
+
+        self.history.append(match)
+        if len(self.history) == self.history_size + 1:
+            self.history = self.history[1:]
         return None
 
 

@@ -8,13 +8,51 @@ from ..mm.error import GameAlreadyExistError
 from ..tables import Match, Round
 
 from .event import EventHandler, EventKind, EventContext
+from .events import RoundStartEvent, RoundEndEvent
+from . import EventMap
 from .error import HandlingResult, HandlingError
 
-__all__ = "MatchTriggerHandler"
+__all__ = ("MatchTriggerHandler", "GameEndHandler")
+
+
+class GameEndHandler(EventHandler):
+    def __init__(self, r: Round, games: Games, evmap: EventMap):
+        self.games = games
+        self.round: Round = r
+        self.evmap = evmap
+
+    @property
+    def tag(self):
+        return self.round.round_id
+
+    @property
+    def kind(self) -> EventKind:
+        return EventKind.RESULT
+
+    def is_ready(self, ctx: EventContext) -> bool:
+        if (
+            not isinstance(ctx.context, InGameContext)
+            or ctx.context.key not in self.games
+        ):
+            return False
+        return ctx.context.is_complete()
+
+    def requeue(self) -> bool:
+        return False
+
+    def handle(self, ctx: EventContext) -> HandlingResult:
+        if not isinstance(ctx.context, InGameContext):
+            return HandlingError("Expected an InGameContext", self)
+
+        self.games.pop(ctx.context.key)
+        print(self)
+        self.round.end_time = datetime.now()
+        return self.evmap.handle(RoundEndEvent(ctx.context, self.round))
 
 
 class MatchTriggerHandler(EventHandler):
-    def __init__(self, config: Config, games: Games):
+    def __init__(self, config: Config, games: Games, evmap: EventMap):
+        self.evmap = evmap
         self.games = games
         self.config = config
 
@@ -33,8 +71,8 @@ class MatchTriggerHandler(EventHandler):
             return True
         return False
 
-    def is_done(self) -> bool:
-        return False
+    def requeue(self) -> bool:
+        return True
 
     def handle(self, ctx: EventContext) -> HandlingResult:
         if not isinstance(ctx.context, QueueContext):
@@ -58,35 +96,6 @@ class MatchTriggerHandler(EventHandler):
             return HandlingError(f"Unable to push game to context: {err.message}", self)
 
         ctx.context.round.round_id += 1
-        return None
 
-
-class GameEndHandler(EventHandler):
-    def __init__(self, games: Games):
-        self.games = games
-
-    @property
-    def kind(self) -> EventKind:
-        return EventKind.RESULT
-
-    @property
-    def tag(self) -> int:
-        return 1
-
-    def is_ready(self, ctx: EventContext) -> bool:
-        if (
-            not isinstance(ctx.context, InGameContext)
-            or ctx.context.key not in self.games
-        ):
-            return False
-        return ctx.context.is_complete()
-
-    def is_done(self) -> bool:
-        return True
-
-    def handle(self, ctx: EventContext) -> HandlingResult:
-        if not isinstance(ctx.context, InGameContext):
-            return HandlingError("Expected an InGameContext", self)
-
-        self.games.pop(ctx.context.key)
-        return None
+        self.evmap.register(GameEndHandler(r, self.games, self.evmap))
+        return self.evmap.handle(RoundStartEvent(context, r))

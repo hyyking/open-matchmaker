@@ -15,8 +15,6 @@ __all__ = ("EventKind", "EventContext", "EventHandler", "Event")
 
 @unique
 class EventKind(Enum):
-    UNSPECIFIED = 0
-
     QUEUE = 1
     DEQUEUE = 2
 
@@ -52,7 +50,7 @@ class EventHandler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def is_done(self) -> bool:
+    def requeue(self) -> bool:
         pass
 
     @abc.abstractmethod
@@ -63,7 +61,7 @@ class EventHandler(abc.ABC):
         return self.tag == rhs.tag
 
     def __repr__(self):
-        return f"{type(self).__name__}(kind={self.kind}, tag={self.tag}, done={self.is_done()})"
+        return f"{type(self).__name__}(kind={self.kind}, tag={self.tag}, requeue={self.requeue()})"
 
 
 class Event(abc.ABC):

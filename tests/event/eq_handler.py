@@ -18,8 +18,8 @@ class EqHandler(EventHandler):
         except AttributeError:
             return False
 
-    def is_done(self) -> bool:
-        return not self.persistent
+    def requeue(self) -> bool:
+        return self.persistent
 
     def handle(self, ctx: EventContext):
         pass

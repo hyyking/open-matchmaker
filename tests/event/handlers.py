@@ -10,7 +10,7 @@ from matchmaker.error import Error
 from matchmaker.event.handlers import MatchTriggerHandler, GameEndHandler
 from matchmaker.event.events import ResultEvent, QueueEvent
 from matchmaker.event.error import HandlingError
-from matchmaker.event import EventMap
+from matchmaker.event import EventMap, EventKind
 
 
 class MatchTriggerHandlerTest(unittest.TestCase):
@@ -21,6 +21,9 @@ class MatchTriggerHandlerTest(unittest.TestCase):
         cls.config = Config(trigger_threshold=2)
 
     def test_queue_trigger(self):
+        self.games.clear()
+        self.qctx.clear()
+
         t1 = Team(
             team_id=42,
             elo=1000,
@@ -34,11 +37,8 @@ class MatchTriggerHandlerTest(unittest.TestCase):
             player_two=Player(discord_id=4),
         )
 
-        self.games.clear()
-        self.qctx.clear()
-
         evmap = EventMap.new()
-        evmap.register(MatchTriggerHandler(self.config, self.games))
+        evmap.register(MatchTriggerHandler(self.config, self.games, evmap))
         prev_round = self.qctx.round.round_id
 
         self.qctx.queue.append(t1)
@@ -51,6 +51,8 @@ class MatchTriggerHandlerTest(unittest.TestCase):
 
         assert self.qctx.round.round_id == prev_round + 1
         assert self.qctx.is_empty()
+        assert len(evmap[EventKind.QUEUE]) == 1
+        assert len(evmap[EventKind.RESULT]) == 1
 
 
 class GameEndHandlerTest(unittest.TestCase):
@@ -80,7 +82,7 @@ class GameEndHandlerTest(unittest.TestCase):
 
     def test_end_trigger(self):
         evmap = EventMap.new()
-        evmap.register(GameEndHandler(self.games))
+        evmap.register(GameEndHandler(self.round, self.games, evmap))
 
         m = Match(
             match_id=1,
