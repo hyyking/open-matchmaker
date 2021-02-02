@@ -7,6 +7,7 @@ from datetime import datetime
 from .error import HandlingError
 from ..tables import Team, Result, Player, Match, Round
 from ..mm.context import QueueContext, InGameContext
+from ..mm.config import Config
 from ..db import Database
 
 __all__ = ("EventKind", "EventContext", "EventHandler", "Event")
@@ -25,19 +26,21 @@ class EventKind(Enum):
 
 @dataclass
 class EventContext:
-    db: Database
     context: Union[QueueContext, InGameContext]
 
+    db: Optional[Database] = field(default=None)
     player: Optional[Player] = field(default=None)
     team: Optional[Team] = field(default=None)
     match: Optional[Match] = field(default=None)
     result: Optional[Result] = field(default=None)
     round: Optional[Round] = field(default=None)
 
-    timestamp: Optional[datetime] = field(default=None)
-
 
 class EventHandler(abc.ABC):
+    @abc.abstractproperty
+    def kind(self) -> int:
+        pass
+
     @abc.abstractproperty
     def tag(self) -> int:
         pass
@@ -56,6 +59,9 @@ class EventHandler(abc.ABC):
 
     def __eq__(self, rhs):
         return self.tag == rhs.tag
+    
+    def __repr__(self):
+        return f"{type(self).__name__}(kind={self.kind}, tag={self.tag}, done={self.is_done()})"
 
 class Event(abc.ABC):
     @abc.abstractproperty

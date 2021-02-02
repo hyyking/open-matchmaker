@@ -7,8 +7,13 @@ from matchmaker.event.events import (
     DequeueEvent, QueueEvent, ResultEvent, RoundStartEvent, RoundEndEvent
 )
 from matchmaker.event.error import HandlingError
+from matchmaker.event.handlers import MatchTriggerHandler, InGameEndHandler
+
 from matchmaker.mm.context import QueueContext, InGameContext
-from matchmaker.tables import Team, Result, Match, Round
+from matchmaker.mm.config import Config
+from matchmaker.mm.games import Games
+
+from matchmaker.tables import Team, Result, Match, Round, Player
 from matchmaker import Database
 
 @dataclass
@@ -17,6 +22,7 @@ class EqHandler(EventHandler):
     key: str = field(default="")
     expect: Any = field(default=None)
     persistent: bool = field(default=False)
+    kind: EventKind = field(default=EventKind.QUEUE)
 
     def is_ready(self, ctx: EventContext) -> bool:
         try:
@@ -31,8 +37,12 @@ class EqHandler(EventHandler):
         pass
 
 def setup(cls):
-    cls.qctx = QueueContext()
-    cls.igctx = InGameContext(Round(), [])
+    cls.config = Config(trigger_threshold=2)
+    cls.round = Round(round_id=1)
+    cls.qctx = QueueContext(cls.round)
+
+    cls.igctx = InGameContext(cls.round, [])
+    cls.games = Games.new()
     cls.db = Database("tests/empty_mockdb.sqlite3")
 
 class EventMapTest(unittest.TestCase):
@@ -42,26 +52,11 @@ class EventMapTest(unittest.TestCase):
 
     def test_add_handler(self):
         evmap = EventMap.new()
-        evmap.register(
-            EventKind.QUEUE,
-            EqHandler(tag=1)
-        )
-        evmap.register(
-            EventKind.DEQUEUE,
-            EqHandler(tag=1)
-        )
-        evmap.register(
-            EventKind.RESULT,
-            EqHandler(tag=1)
-        )
-        evmap.register(
-            EventKind.ROUND_START,
-            EqHandler(tag=1)
-        )
-        evmap.register(
-            EventKind.ROUND_END,
-            EqHandler(tag=1)
-        )
+        evmap.register(EqHandler(tag=1, kind=EventKind.QUEUE))
+        evmap.register(EqHandler(tag=1, kind=EventKind.DEQUEUE))
+        evmap.register(EqHandler(tag=1, kind=EventKind.RESULT))
+        evmap.register(EqHandler(tag=1, kind=EventKind.ROUND_START))
+        evmap.register(EqHandler(tag=1, kind=EventKind.ROUND_END))
         assert len(evmap[EventKind.QUEUE]) == 1
         assert len(evmap[EventKind.DEQUEUE]) == 1
         assert len(evmap[EventKind.RESULT]) == 1
@@ -70,34 +65,22 @@ class EventMapTest(unittest.TestCase):
 
     def test_remove_handler(self):
         evmap = EventMap.new()
-        evmap.register(
-            EventKind.QUEUE,
-            EqHandler(tag=1)
-        )
+        evmap.register(EqHandler(tag=1))
         assert len(evmap[EventKind.QUEUE]) == 1
-        evmap.deregister(
-            EventKind.QUEUE,
-            EqHandler(tag=1)
-        )
+        evmap.deregister(EqHandler(tag=1))
         assert len(evmap[EventKind.QUEUE]) == 0
     
     def test_temp_handle(self):
         evmap = EventMap.new()
-        evmap.register(
-            EventKind.QUEUE,
-            EqHandler(tag=1, key="team", expect=Team(team_id=69))
-        )
-        qe = QueueEvent(self.db, self.qctx, Team(team_id=69))
+        evmap.register(EqHandler(tag=1, key="team", expect=Team(team_id=69)))
+        qe = QueueEvent(self.qctx, Team(team_id=69))
         assert not isinstance(evmap.handle(qe), HandlingError)
         assert len(evmap[EventKind.QUEUE]) == 0
     
     def test_persistant_handle(self):
         evmap = EventMap.new()
-        evmap.register(
-            EventKind.QUEUE,
-            EqHandler(tag=1, key="team", expect=Team(team_id=69), persistent=True)
-        )
-        qe = QueueEvent(self.db, self.qctx, Team(team_id=69))
+        evmap.register(EqHandler(tag=1, key="team", expect=Team(team_id=69), persistent=True))
+        qe = QueueEvent(self.qctx, Team(team_id=69))
         assert not isinstance(evmap.handle(qe), HandlingError)
         assert len(evmap[EventKind.QUEUE]) == 1
 
@@ -109,21 +92,12 @@ class QueueEvents(unittest.TestCase):
         setup(cls)
         cls.evmap = EventMap.new()
 
-        cls.evmap.register(
-            EventKind.QUEUE,
-            EqHandler(tag=1, key="team", expect=Team(team_id=69))
-        )
-        cls.evmap.register(
-            EventKind.QUEUE,
-            EqHandler(tag=2, key="team", expect=Team(team_id=42))
-        )
-        cls.evmap.register(
-            EventKind.DEQUEUE,
-            EqHandler(tag=3, key="team", expect=Team(team_id=69))
-        )
+        cls.evmap.register(EqHandler(tag=1, key="team", expect=Team(team_id=69)))
+        cls.evmap.register(EqHandler(tag=2, key="team", expect=Team(team_id=42)))
+        cls.evmap.register(EqHandler(tag=3, key="team", expect=Team(team_id=69), kind=EventKind.DEQUEUE))
 
     def test_queue(self):
-        qe = QueueEvent(self.db, self.qctx, Team(team_id=69))
+        qe = QueueEvent(self.qctx, Team(team_id=69))
         ready = self.evmap.poll(qe)
         handler = next(ready)
         assert handler is not None
@@ -131,12 +105,63 @@ class QueueEvents(unittest.TestCase):
         assert next(ready, None) is None
     
     def test_dequeue(self):
-        qe = DequeueEvent(self.db, self.qctx, Team(team_id=69))
+        qe = DequeueEvent(self.qctx, Team(team_id=69))
         ready = self.evmap.poll(qe)
         handler = next(ready)
         assert handler is not None
         assert handler.tag == 3
         assert next(ready, None) is None
+
+    def test_queue_trigger(self):
+        self.games.clear()
+        self.qctx.clear()
+
+        evmap = EventMap.new()
+        evmap.register(MatchTriggerHandler(self.config, self.games))
+        prev_round = self.qctx.round.round_id
+        
+        t1 = Team(team_id=42, elo=1000, player_one=Player(discord_id=1), player_two=Player(discord_id=2))
+        t2 = Team(team_id=69, elo=1000, player_one=Player(discord_id=3), player_two=Player(discord_id=4))
+
+        assert self.qctx.queue_team(t1)
+        q1 = QueueEvent(self.qctx, t1)
+        assert not isinstance(evmap.handle(q1), HandlingError)
+        assert self.qctx.queue_team(t2)
+        q2 = QueueEvent(self.qctx, t2)
+        assert not isinstance(evmap.handle(q2), HandlingError)
+
+        assert self.qctx.round.round_id == prev_round + 1
+        assert self.qctx.is_empty()
+
+    def test_end_trigger(self):
+        self.games.clear()
+        self.qctx.clear()
+
+        self.games = Games({
+            self.round.round_id: InGameContext(self.round, [Match(match_id=1, round=self.round)])
+        })
+        evmap = EventMap.new()
+        evmap.register(InGameEndHandler(self.games))
+
+        t1 = Team(team_id=42, elo=1000, player_one=Player(discord_id=1), player_two=Player(discord_id=2))
+        t2 = Team(team_id=69, elo=1000, player_one=Player(discord_id=3), player_two=Player(discord_id=4))
+        
+        result1 = Result(result_id=0, team=t1, points=3, delta=-1)
+        result2 = Result(result_id=1, team=t2, points=7, delta=1)
+        m = Match(
+            match_id=1,
+            round=self.round,
+            team_one=result1,
+            team_two=result2
+        )
+
+        assert self.games.add_result(m) == 1
+        assert self.games[1].is_complete()
+
+        e = ResultEvent(self.games[1], m)
+        assert not isinstance(evmap.handle(e), HandlingError)
+
+        assert len(self.games) == 0
 
 
 class ResultEvents(unittest.TestCase):
@@ -146,11 +171,8 @@ class ResultEvents(unittest.TestCase):
 
     def test_result(self):
         evmap = EventMap.new()
-        evmap.register(
-            EventKind.RESULT,
-            EqHandler(tag=2, key="match", expect=Match(match_id=42))
-        )
-        qe = ResultEvent(self.db, self.igctx, Match(match_id=42))
+        evmap.register(EqHandler(tag=2, key="match", expect=Match(match_id=42), kind=EventKind.RESULT))
+        qe = ResultEvent(self.igctx, Match(match_id=42))
 
         ready = evmap.poll(qe)
         handler = next(ready)
@@ -165,8 +187,7 @@ class RoundEvents(unittest.TestCase):
     def test_round_start(self):
         evmap = EventMap.new()
         evmap.register(
-            EventKind.ROUND_START,
-            EqHandler(tag=1, key="round", expect=Round(round_id=69))
+            EqHandler(tag=1, key="round", expect=Round(round_id=69), kind=EventKind.ROUND_START)
         )
 
         qe = RoundStartEvent(self.db, self.igctx, Round(round_id=69))
@@ -179,8 +200,7 @@ class RoundEvents(unittest.TestCase):
     def test_round_end(self):
         evmap = EventMap.new()
         evmap.register(
-            EventKind.ROUND_END,
-            EqHandler(tag=2, key="round", expect=Round(round_id=69))
+            EqHandler(tag=2, key="round", expect=Round(round_id=69), kind=EventKind.ROUND_END)
         )
 
         qe = RoundEndEvent(self.db, self.igctx, Round(round_id=69))

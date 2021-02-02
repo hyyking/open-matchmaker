@@ -40,8 +40,8 @@ class Principal(abc.ABC):
     def period(self):
         """ compute periodic factor for the turn: {0, 1} """
         turn = self.round.round_id * 100
-        d = self.config.duty_cycle / 5
-        t = self.config.active
+        d = self.config.period["duty_cycle"] / 5
+        t = self.config.period["active"]
         return max((-1) ** int((turn % t)/t >= d), 0)
 
     def match_utility(self, match: Match) -> float:
@@ -59,12 +59,12 @@ class Principal(abc.ABC):
     def possible_sets(self, history: List[Match], teams: List[Team]) -> Iterator[Tuple[Match, ...]]:
         p_matches = {
                 Match(
-                    match_id=0,
+                    match_id=i,
                     round=self.round,
                     team_one=Result(team=t[0]),
                     team_two=Result(team=t[1])
                 )
-                for t in it.combinations(teams, 2)
+                for i, t in enumerate(it.combinations(teams, 2))
         }
         p_matches.difference_update(set(history))
         return filter(filter_matches, it.combinations(p_matches, len(teams)//2))
@@ -120,7 +120,7 @@ def get_principal(round: Round, config: Config) -> Principal:
     principal = principals.get(config.principal)
     if principal is None:
         logger = logging.getLogger(__name__)
-        logger.warn("Principal '{self.config.principal}' not found using 'max_sum' instead")
+        logger.warn(f"Principal '{self.config.principal}' not found using 'max_sum' instead")
         logger.info(f"use one of {list(principals.keys())}")
         return MaxSum(round, config)
     else:

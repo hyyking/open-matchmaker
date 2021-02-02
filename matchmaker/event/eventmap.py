@@ -10,11 +10,11 @@ class EventMap(dict):
     def new(cls) -> "EventMap":
         return cls({kind: [] for kind in list(EventKind)})
 
-    def register(self, kind: EventKind, handler: EventHandler):
-        self[kind].append(handler)
+    def register(self, handler: EventHandler):
+        self[handler.kind].append(handler)
     
-    def deregister(self, kind: EventKind, handler: EventHandler):
-        self[kind].remove(handler)
+    def deregister(self, handler: EventHandler):
+        self[handler.kind].remove(handler)
 
     def poll(self, event: Event) -> Iterator[EventHandler]:
         return filter(lambda h: h.is_ready(event.ctx), self[event.kind])
@@ -23,8 +23,8 @@ class EventMap(dict):
         for handler in self.poll(event):
             err = handler.handle(event.ctx)
             if isinstance(err, HandlingError):
-                self.deregister(event.kind, handler)
+                self.deregister(handler)
                 return err
             if handler.is_done():
-                self.deregister(event.kind, handler)
+                self.deregister(handler)
         return None
