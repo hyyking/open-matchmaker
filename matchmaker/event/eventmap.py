@@ -3,7 +3,8 @@ from typing import Iterator
 from .event import Event, EventHandler, EventKind
 from .error import HandlingError, HandlingResult
 
-__all__ = ("EventMap")
+__all__ = "EventMap"
+
 
 class EventMap(dict):
     @classmethod
@@ -12,7 +13,7 @@ class EventMap(dict):
 
     def register(self, handler: EventHandler):
         self[handler.kind].append(handler)
-    
+
     def deregister(self, handler: EventHandler):
         self[handler.kind].remove(handler)
 

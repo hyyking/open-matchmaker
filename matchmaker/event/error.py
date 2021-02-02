@@ -4,9 +4,11 @@ from ..error import Error
 
 __all__ = ("HandlingError", "HandlingResult")
 
+
 class HandlingError(Error):
     def __init__(self, message, handler):
         super().__init__(message)
         self.handler = handler
+
 
 HandlingResult = Union[None, HandlingError]

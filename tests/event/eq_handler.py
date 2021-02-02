@@ -3,6 +3,7 @@ from typing import Any
 
 from matchmaker.event import EventHandler, EventKind, EventContext
 
+
 @dataclass
 class EqHandler(EventHandler):
     tag: int = field(default=0)
@@ -16,9 +17,9 @@ class EqHandler(EventHandler):
             return self.expect == getattr(ctx, self.key)
         except AttributeError:
             return False
-    
+
     def is_done(self) -> bool:
         return not self.persistent
-    
+
     def handle(self, ctx: EventContext):
         pass

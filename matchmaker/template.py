@@ -9,20 +9,24 @@ class AsStatement(abc.ABC):
     def render(self):
         raise NotImplementedError
 
+
 Statement = Union[str, int, AsStatement]
+
 
 def render_statement(s: Statement) -> str:
     """ removes AsStatement type of union """
     if isinstance(s, AsStatement):
         return s.render()
-    else: 
+    else:
         return str(s)
+
 
 class QueryKind(Enum):
     NONE = 0
     SELECT = 1
     EXISTS = 2
     INSERT = 3
+
 
 @dataclass
 class WithOperand(AsStatement):
@@ -34,7 +38,7 @@ class WithOperand(AsStatement):
     def render(self):
         op1 = self.operand_1
         if isinstance(self.operand_2, str) and "." not in self.operand_2:
-            op2 = f"\'{self.operand_2}\'" 
+            op2 = f"'{self.operand_2}'"
         else:
             op2 = self.operand_2
         op1 = render_statement(op1)
@@ -44,10 +48,12 @@ class WithOperand(AsStatement):
         else:
             return f"{op1} {self.operation} {op2}"
 
+
 @dataclass
 class Eq(WithOperand):
     def __post_init__(self):
         self.operation = "="
+
 
 @dataclass
 class Or(WithOperand):
@@ -55,46 +61,57 @@ class Or(WithOperand):
         self.operation = "OR"
         self.wrap = True
 
+
 @dataclass
 class And(WithOperand):
     def __post_init__(self):
         self.operation = "AND"
         self.wrap = True
 
+
 Conditional = Union[Eq, Or, And]
+
 
 class Values(AsStatement, tuple):
     def render(self):
-        convert = lambda x: f"\'{x}\'" if isinstance(x, str) else str(x)
+        convert = lambda x: f"'{x}'" if isinstance(x, str) else str(x)
         values = ",".join(map(convert, self))
         return f"({values})"
+
 
 @dataclass
 class Sum(AsStatement):
     header: Statement
+
     def render(self):
         return f"SUM({render_statement(self.header)})"
 
+
 @dataclass
 class InnerJoin(AsStatement):
-    table: Statement 
+    table: Statement
     on: Optional[Statement] = None
+
     def render(self):
         table = render_statement(self.table)
         if self.on is None:
             return f"INNER JOIN {table}"
         return f"INNER JOIN {table} ON {render_statement(self.on)}\n"
 
+
 @dataclass
 class Alias(AsStatement):
     table: str
     alias: str
+
     def render(self):
         return f"{self.table} as {self.alias}"
+
 
 @dataclass
 class Where(AsStatement):
     conditions: Statement
+
     def render(self):
         return f"WHERE {render_statement(self.conditions)}\n"
 
@@ -139,7 +156,7 @@ class ColumnQuery(AsStatement):
         if not isinstance(self.headers, list):
             self.header = [self.headers]
         return ",".join(map(render_statement, self.headers))
-    
+
     def render_statements(self) -> str:
         if not isinstance(self.statement, list):
             self.statement = [self.statement]
@@ -149,7 +166,7 @@ class ColumnQuery(AsStatement):
         context = {
             "headers": self.join_headers(),
             "table": self.table,
-            "statements": self.render_statements()
+            "statements": self.render_statements(),
         }
         if self.kind is QueryKind.NONE:
             raise ValueError("QueryKind has not been specified")
@@ -159,6 +176,8 @@ class ColumnQuery(AsStatement):
             del context["headers"]
             return EXISTS.format(**context)
         elif self.kind is QueryKind.INSERT:
-            return "INSERT INTO {table}({headers}) VALUES {statements}".format(**context)
+            return "INSERT INTO {table}({headers}) VALUES {statements}".format(
+                **context
+            )
         else:
             raise NotImplementedError(f"Missing QueryKind {self.kind}")

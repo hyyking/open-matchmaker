@@ -1,4 +1,3 @@
-
 from .mm import MatchMaker
 from .mm.config import Config
 from .db import Database

@@ -10,7 +10,7 @@ from ..tables import Match, Round
 from .event import EventHandler, EventKind, EventContext
 from .error import HandlingResult, HandlingError
 
-__all__ = ("MatchTriggerHandler")
+__all__ = "MatchTriggerHandler"
 
 
 class MatchTriggerHandler(EventHandler):
@@ -32,7 +32,7 @@ class MatchTriggerHandler(EventHandler):
         if len(ctx.context) == self.config.trigger_threshold:
             return True
         return False
-    
+
     def is_done(self) -> bool:
         return False
 
@@ -68,16 +68,19 @@ class GameEndHandler(EventHandler):
     @property
     def kind(self) -> EventKind:
         return EventKind.RESULT
-    
+
     @property
     def tag(self) -> int:
         return 1
 
     def is_ready(self, ctx: EventContext) -> bool:
-        if not isinstance(ctx.context, InGameContext) or ctx.context.key not in self.games:
+        if (
+            not isinstance(ctx.context, InGameContext)
+            or ctx.context.key not in self.games
+        ):
             return False
         return ctx.context.is_complete()
-    
+
     def is_done(self) -> bool:
         return True
 

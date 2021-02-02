@@ -11,8 +11,9 @@ QUERYERROR = """{title} {{
     exception: {exception}
 }}"""
 
+
 class Database:
-    def __init__(self, path: str, log_handler = None, log_level = None):
+    def __init__(self, path: str, log_handler=None, log_level=None):
         self.__conn = sql.connect(path)
         self.logger = logging.getLogger(__name__)
         if log_level:
@@ -25,11 +26,11 @@ class Database:
     def __del__(self):
         self.__conn.commit()
         self.__conn.close()
-    
+
     @property
     def conn(self) -> sql.Cursor:
         return self.__conn.cursor()
-    
+
     def insert(self, query: Insertable, title: str = "InsertQuery") -> bool:
         """ insert to the database, returns False on failure """
         return self.execute(query.as_insert_query(), title) is not None
@@ -43,7 +44,7 @@ class Database:
         return q is None or q.fetchone()[0] == 1
 
     def execute(self, query: ColumnQuery, title: str) -> Optional[sql.Cursor]:
-        try: 
+        try:
             q = self.conn.execute(query.render())
             self.logger.debug(f"Executed {title} query")
             return q
@@ -52,25 +53,20 @@ class Database:
                 "title": title,
                 "item": query,
                 "query": query.render(),
-                "exception": err
+                "exception": err,
             }
             self.logger.error(QUERYERROR.format(**context))
             del context["query"]
             self.last_err = context
             return None
-    
+
     def load(self, query: Loadable, title: str = "LoadQuery") -> Optional[Loadable]:
-        try: 
-            l = cast(Optional[Loadable], type(query).load_from(self, query)) # type: ignore
+        try:
+            l = cast(Optional[Loadable], type(query).load_from(self, query))  # type: ignore
             self.logger.debug(f"Executed {title} query")
             return l
         except Exception as err:
-            context = {
-                "title": "Load",
-                "item": query,
-                "query": None,
-                "exception": err
-            }
+            context = {"title": "Load", "item": query, "query": None, "exception": err}
             self.logger.error(QUERYERROR.format(**context))
             return None
 
@@ -86,9 +82,12 @@ class Database:
             tid = result[0]
             team = result[1]
             p1_name, p1_id, p2_name, p2_id = result[2:]
-            print(f"""({tid}) {team}:
+            print(
+                f"""({tid}) {team}:
     {p1_name} ({p1_id})
-    {p2_name} ({p2_id})""")
+    {p2_name} ({p2_id})"""
+            )
+
 
 #   def summarise_results(conn):
 #       """ summarise match result data """

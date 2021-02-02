@@ -33,17 +33,19 @@ class EventMapTest(unittest.TestCase):
         assert len(evmap[EventKind.QUEUE]) == 1
         evmap.deregister(EqHandler(tag=1))
         assert len(evmap[EventKind.QUEUE]) == 0
-    
+
     def test_temp_handle(self):
         evmap = EventMap.new()
         evmap.register(EqHandler(tag=1, key="team", expect=Team(team_id=69)))
         qe = QueueEvent(self.qctx, Team(team_id=69))
         assert not isinstance(evmap.handle(qe), HandlingError)
         assert len(evmap[EventKind.QUEUE]) == 0
-    
+
     def test_persistant_handle(self):
         evmap = EventMap.new()
-        evmap.register(EqHandler(tag=1, key="team", expect=Team(team_id=69), persistent=True))
+        evmap.register(
+            EqHandler(tag=1, key="team", expect=Team(team_id=69), persistent=True)
+        )
         qe = QueueEvent(self.qctx, Team(team_id=69))
         assert not isinstance(evmap.handle(qe), HandlingError)
         assert len(evmap[EventKind.QUEUE]) == 1

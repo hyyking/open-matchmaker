@@ -16,7 +16,7 @@ from ..error import Failable, Error
 from ..db import Database
 from ..tables import Player, Team, Match, Result, Round
 
-__all__ = ("MatchMaker")
+__all__ = "MatchMaker"
 
 
 class MatchMaker:
@@ -26,14 +26,13 @@ class MatchMaker:
         self.logger = logging.getLogger(__name__)
         self.db = database
         self.config = config
-        
+
         self.qctx = QueueContext(base_round)
         self.games = Games.new()
-        
+
         self.evmap = EventMap.new()
         self.evmap.register(MatchTriggerHandler(self.config, self.games))
 
-        
         self.logger.info(f"MatchMaker initialized at round: {base_round.round_id}")
 
     def has_queued_player(self, player: Player) -> bool:
@@ -55,7 +54,7 @@ class MatchMaker:
         self.qctx.clear()
         self.games.clear()
         self.logger.info(f"cleared queue and games")
-    
+
     def queue_team(self, team: Team) -> Failable:
         err = self.qctx.queue_team(team)
         if isinstance(err, Error):
@@ -64,10 +63,10 @@ class MatchMaker:
         err = self.evmap.handle(QueueEvent(self.qctx, team))
         if isinstance(err, Error):
             return err
-        
+
         self.logger.info(f"queued ({team.team_id}) {team.name}")
         return None
-    
+
     def dequeue_team(self, team: Team) -> Failable:
         err = self.qctx.dequeue_team(team)
         if isinstance(err, Error):
@@ -76,7 +75,7 @@ class MatchMaker:
         err = self.evmap.handle(DequeueEvent(self.qctx, team))
         if isinstance(err, Error):
             return err
-        
+
         self.logger.info(f"dequeued ({team.team_id}) {team.name}")
         return None
 

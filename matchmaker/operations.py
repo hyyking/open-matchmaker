@@ -6,8 +6,6 @@ from .template import ColumnQuery, Conditional
 __all__ = ("Insertable", "UniqueId", "Loadable")
 
 
-
-
 class Table(abc.ABC):
     @property
     def table(self) -> str:
@@ -34,10 +32,12 @@ class Table(abc.ABC):
             self, self.primary_key
         ) == getattr(rhs, self.primary_key)
 
+
 class Insertable(abc.ABC):
     @abc.abstractmethod
     def as_insert_query(self):
         raise NotImplementedError
+
 
 class Loadable(abc.ABC):
     @abc.abstractclassmethod

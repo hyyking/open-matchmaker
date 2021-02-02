@@ -12,17 +12,19 @@ from ..db import Database
 
 __all__ = ("EventKind", "EventContext", "EventHandler", "Event")
 
+
 @unique
 class EventKind(Enum):
     UNSPECIFIED = 0
-    
+
     QUEUE = 1
     DEQUEUE = 2
-    
+
     RESULT = 3
 
     ROUND_START = 4
     ROUND_END = 5
+
 
 @dataclass
 class EventContext:
@@ -48,7 +50,7 @@ class EventHandler(abc.ABC):
     @abc.abstractmethod
     def is_ready(self, ctx: EventContext) -> bool:
         pass
-    
+
     @abc.abstractmethod
     def is_done(self) -> bool:
         pass
@@ -59,15 +61,16 @@ class EventHandler(abc.ABC):
 
     def __eq__(self, rhs):
         return self.tag == rhs.tag
-    
+
     def __repr__(self):
         return f"{type(self).__name__}(kind={self.kind}, tag={self.tag}, done={self.is_done()})"
+
 
 class Event(abc.ABC):
     @abc.abstractproperty
     def kind(self) -> EventKind:
         pass
-    
+
     @abc.abstractproperty
     def ctx(self) -> EventContext:
         pass

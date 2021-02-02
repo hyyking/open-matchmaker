@@ -4,11 +4,21 @@ from typing import Optional, cast
 from discord.ext import commands
 
 from matchmaker.tables import Player, Team, Result
-from matchmaker.template import ColumnQuery, QueryKind, Eq, And, Or, Where, InnerJoin, Alias
+from matchmaker.template import (
+    ColumnQuery,
+    QueryKind,
+    Eq,
+    And,
+    Or,
+    Where,
+    InnerJoin,
+    Alias,
+)
 
 from .ctx import BotContext
 
-__all__ = ("PlayerCog")
+__all__ = "PlayerCog"
+
 
 class ToPlayer(commands.MemberConverter, Player):
     async def convert(self, ctx, argument):
@@ -33,23 +43,30 @@ class PlayerCog(commands.Cog, BotContext):
             assert self.db.insert(current)
         if not self.db.exists(teammate, "RegisterUnregisteredPlayer"):
             assert self.db.insert(teammate)
-        
+
         if self.db.exists(Team(name=team_name), "IsDuplicateTeamName"):
             message = f"'{team_name}' is already present, use a different name!"
             message = self.bot.fmterr(message)
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        query = ColumnQuery(QueryKind.EXISTS, "team", ["name"], Where(Or(
-            And(
-                Eq("player_one", current.discord_id),
-                Eq("player_two", teammate.discord_id)
+        query = ColumnQuery(
+            QueryKind.EXISTS,
+            "team",
+            ["name"],
+            Where(
+                Or(
+                    And(
+                        Eq("player_one", current.discord_id),
+                        Eq("player_two", teammate.discord_id),
+                    ),
+                    And(
+                        Eq("player_one", teammate.discord_id),
+                        Eq("player_two", current.discord_id),
+                    ),
+                )
             ),
-            And(
-                Eq("player_one", teammate.discord_id),
-                Eq("player_two", current.discord_id)
-            )
-        )))
+        )
         q = self.db.execute(query, "PlayerHasTeam")
         assert q is not None
         if q.fetchone()[0] == 1:
@@ -62,7 +79,9 @@ class PlayerCog(commands.Cog, BotContext):
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
-            assert self.db.insert(Team(name=team_name, player_one=current, player_two=teammate))
+            assert self.db.insert(
+                Team(name=team_name, player_one=current, player_two=teammate)
+            )
             message = self.bot.fmtok(
                 f"registered {current.name}'s and {teammate.name}'s team {team_name}"
             )
@@ -78,8 +97,10 @@ class PlayerCog(commands.Cog, BotContext):
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        team = cast(Optional[Team], self.db.load(
-            Team(name=team_name, elo=self.mm.config.base_elo)))
+        team = cast(
+            Optional[Team],
+            self.db.load(Team(name=team_name, elo=self.mm.config.base_elo)),
+        )
 
         assert team is not None
         assert team.name is not None
@@ -116,7 +137,7 @@ class PlayerCog(commands.Cog, BotContext):
     async def dequeue(self, ctx):
         current = Player(ctx.message.author.id, ctx.message.author.name)
         mm = self.bot.mm
-        
+
         if not mm.has_queued_player(current):
             message = self.bot.fmterr(f"None of your teams are queued!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
@@ -125,10 +146,7 @@ class PlayerCog(commands.Cog, BotContext):
         assert mm.dequeue_team(team)
 
         message = self.bot.fmtok(f"dequeued {team.name}")
-        await ctx.message.channel.send(
-            content=message,
-            reference=ctx.message
-        )
+        await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
     async def who(self, ctx):
@@ -144,18 +162,34 @@ class PlayerCog(commands.Cog, BotContext):
         current = Player(ctx.message.author.id, ctx.message.author.name)
         if who is not None:
             current = who
-        
-        query = ColumnQuery(QueryKind.SELECT, "team",
-            ["team.team_id", "team.name", "p1.discord_id", "p1.name", "p2.discord_id","p2.name"],
+
+        query = ColumnQuery(
+            QueryKind.SELECT,
+            "team",
             [
-                InnerJoin(Alias("player", "p1"), on=Eq("p1.discord_id ", "team.player_one")),
-                InnerJoin(Alias("player", "p2"), on=Eq("p2.discord_id ", "team.player_two")),
-                Where(Or(
-                    Eq("player_one", current.discord_id),
-                    Eq("player_two", current.discord_id)
-                ))
-            ]
+                "team.team_id",
+                "team.name",
+                "p1.discord_id",
+                "p1.name",
+                "p2.discord_id",
+                "p2.name",
+            ],
+            [
+                InnerJoin(
+                    Alias("player", "p1"), on=Eq("p1.discord_id ", "team.player_one")
+                ),
+                InnerJoin(
+                    Alias("player", "p2"), on=Eq("p2.discord_id ", "team.player_two")
+                ),
+                Where(
+                    Or(
+                        Eq("player_one", current.discord_id),
+                        Eq("player_two", current.discord_id),
+                    )
+                ),
+            ],
         )
+
         def to_team(query):
             tid, tn, p1id, p1name, p2id, p2name = query
             return Team(
@@ -163,9 +197,9 @@ class PlayerCog(commands.Cog, BotContext):
                 name=tn,
                 player_one=Player(p1id, p1name),
                 player_two=Player(p2id, p2name),
-                elo=self.bot.mm.config.base_elo 
+                elo=self.bot.mm.config.base_elo,
             )
-        
+
         q = self.db.execute(query, "FetchPlayerTeams")
         assert q is not None
         content = ""
@@ -176,6 +210,6 @@ class PlayerCog(commands.Cog, BotContext):
             team.elo += delta if delta is not None else 0
             content += f"{team.team_id} | {team.name}({team.elo}): {team.player_one.name} \
 & {team.player_two.name}\n"
-        
+
         message = f"```{content}```"
         await ctx.message.channel.send(content=message, reference=ctx.message)

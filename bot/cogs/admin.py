@@ -5,7 +5,8 @@ from .ctx import BotContext
 from discord.ext import commands
 
 
-__all__ = ("AdminCog")
+__all__ = "AdminCog"
+
 
 class AdminCog(commands.Cog, BotContext):
     @commands.command()

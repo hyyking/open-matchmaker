@@ -5,7 +5,7 @@ from .context import InGameContext
 from .error import MissingContextError, GameAlreadyExistError
 from ..error import Failable, Error
 
-__all__ = ("Games")
+__all__ = "Games"
 
 
 class Games(dict):
@@ -40,8 +40,10 @@ class Games(dict):
                 return t2
             return None
         else:
-            raise KeyError("Invalid index, use tuple of team, player, match or context key")
-        
+            raise KeyError(
+                "Invalid index, use tuple of team, player, match or context key"
+            )
+
     def get_context_player(self, player: Player) -> Optional[InGameContext]:
         for context in self.values():
             if context[player] is not None:
@@ -53,13 +55,12 @@ class Games(dict):
             return GameAlreadyExistError("Game already exists", context.key)
         self[context.key] = context
         return None
-    
 
     def add_result(self, result: Match) -> Union[int, Error]:
         context = self[result]
         if context is None:
             return MissingContextError("Result has no associated context", result)
-        
+
         err = context.add_result(result)
         if isinstance(err, Error):
             return err

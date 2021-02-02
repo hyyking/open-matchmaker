@@ -8,11 +8,9 @@ from matchmaker import Database, MatchMaker
 
 __all__ = ("MatchMakerBot", "Database", "MatchMaker")
 
+
 class MatchMakerBot(commands.Bot):
-    def __init__(self,
-            config: BotConfig,
-            mm: MatchMaker,
-            cogs: List[commands.Cog]):
+    def __init__(self, config: BotConfig, mm: MatchMaker, cogs: List[commands.Cog]):
         super().__init__(command_prefix=config.command_prefix)
 
         self.logger = logging.getLogger(__name__)
@@ -24,12 +22,12 @@ class MatchMakerBot(commands.Bot):
             setattr(cog, "__mm", self.mm)
             self.add_cog(cog)
 
-
     def fmterr(self, err):
         return f"{self.config.err_prefix} : {err}"
+
     def fmtok(self, ok):
         return f"{self.config.ok_prefix} : {ok}"
-    
+
     async def on_message(self, message):
         is_command = message.content[0] == self.command_prefix
         if message.channel.name != self.config.channel:
@@ -39,13 +37,15 @@ class MatchMakerBot(commands.Bot):
     async def on_ready(self):
         self.logger.info("MatchMaker launched !")
         info = await self.application_info()
-        print(f"""|| AppInfo
+        print(
+            f"""|| AppInfo
              id: {info.id},
            name: {info.name},
           owner: {info.owner.name} ({info.owner.id})
          public: {info.bot_public},
     description: {info.name},
-""")
+"""
+        )
 
     async def on_command_completion(self, ctx):
         command_name = ctx.command.qualified_name

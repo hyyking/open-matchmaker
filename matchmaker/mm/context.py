@@ -2,11 +2,18 @@ from typing import Set, List, Optional
 import logging
 from enum import Enum
 
-from .error import MissingFieldsError, AlreadyQueuedError, NotQueuedError, GameEndedError, DuplicateResultError
+from .error import (
+    MissingFieldsError,
+    AlreadyQueuedError,
+    NotQueuedError,
+    GameEndedError,
+    DuplicateResultError,
+)
 from ..tables import Player, Team, Match, Result, Round, Index
 from ..error import Failable
 
 __all__ = ("QueueContext", "InGameContext", "InGameState")
+
 
 class QueueContext:
     round: Round
@@ -19,7 +26,7 @@ class QueueContext:
         self.players = set()
         self.queue = []
         self.history = []
-    
+
     def __len__(self) -> int:
         return len(self.queue)
 
@@ -49,15 +56,17 @@ class QueueContext:
                 return t2
             return None
         else:
-            raise KeyError("Invalid index, use tuple of team, player, match or context key")
+            raise KeyError(
+                "Invalid index, use tuple of team, player, match or context key"
+            )
 
     def clear(self):
         self.players.clear()
         self.queue.clear()
-    
+
     def is_empty(self) -> bool:
         return len(self.players) == 0 and len(self.queue) == 0
- 
+
     def get_team_player(self, player: Player) -> Optional[Team]:
         if player not in self.players:
             return None
@@ -73,7 +82,7 @@ class QueueContext:
 
         assert team.player_one is not None
         assert team.player_two is not None
-        
+
         if self[team.player_one] is not None or self[team.player_two] is not None:
             return AlreadyQueuedError("Players are already queued", team)
 
@@ -87,18 +96,20 @@ class QueueContext:
             return MissingFieldsError("Missing player fields when dequeuing team", team)
         elif self[team] is None:
             return NotQueuedError("Team is not queued", team)
-        
+
         assert team.player_one is not None
         assert team.player_two is not None
-        
+
         self.players.remove(team.player_one)
         self.players.remove(team.player_two)
         self.queue.remove(team)
         return None
 
+
 class InGameState(Enum):
     INGAME = 0
     ENDED = 1
+
 
 class InGameContext:
     round: Round
@@ -116,7 +127,6 @@ class InGameContext:
 
     def __repr__(self):
         return f"InGameContext(state={self.state}, round_id={self.round.round_id})"
-
 
     def __getitem__(self, index: Index) -> Optional[Match]:
         if isinstance(index, Player) and Player.validate(index):
@@ -142,8 +152,9 @@ class InGameContext:
                 return t2
             return None
         else:
-            raise KeyError("Invalid index, use tuple of team, player, match or context key")
-
+            raise KeyError(
+                "Invalid index, use tuple of team, player, match or context key"
+            )
 
     def is_complete(self) -> bool:
         return self.state is InGameState.ENDED
@@ -155,7 +166,9 @@ class InGameContext:
             assert match.team_one.team is not None
             assert match.team_two.team is not None
 
-            if match.team_one.team.has_player(player) or match.team_two.team.has_player(player):
+            if match.team_one.team.has_player(player) or match.team_two.team.has_player(
+                player
+            ):
                 return match
         return None
 
@@ -171,7 +184,7 @@ class InGameContext:
         assert r2 is not None
         assert r1.team is not None
         assert r2.team is not None
-        
+
         if r1.team in self.results or r2.team in self.results:
             return DuplicateResultError("Result is already in the context", result)
 
