@@ -31,7 +31,7 @@ class EventMapTest(unittest.TestCase):
         evmap = EventMap.new()
         evmap.register(EqHandler(tag=1))
         assert len(evmap[EventKind.QUEUE]) == 1
-        evmap.__deregister(EqHandler(tag=1))
+        evmap.deregister(EqHandler(tag=1))
         assert len(evmap[EventKind.QUEUE]) == 0
 
     def test_temp_handle(self):

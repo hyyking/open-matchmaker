@@ -45,7 +45,6 @@ class GameEndHandler(EventHandler):
             return HandlingError("Expected an InGameContext", self)
 
         self.games.pop(ctx.context.key)
-        print(self)
         self.round.end_time = datetime.now()
         return self.evmap.handle(RoundEndEvent(ctx.context, self.round))
 

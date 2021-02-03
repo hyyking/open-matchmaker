@@ -1,5 +1,7 @@
 import unittest
 
+from .eq_handler import EqHandler
+
 from matchmaker.mm.games import Games
 from matchmaker.mm.context import QueueContext, InGameContext
 from matchmaker.mm import Config
@@ -39,6 +41,17 @@ class MatchTriggerHandlerTest(unittest.TestCase):
 
         evmap = EventMap.new()
         evmap.register(MatchTriggerHandler(self.config, self.games, evmap))
+
+        evmap.register(
+            EqHandler(
+                tag=1,
+                key="round",
+                expect=Round(round_id=self.qctx.round.round_id),
+                kind=EventKind.ROUND_START,
+                persistent=False,
+            )
+        )
+
         prev_round = self.qctx.round.round_id
 
         self.qctx.queue.append(t1)
@@ -49,10 +62,12 @@ class MatchTriggerHandlerTest(unittest.TestCase):
         q2 = QueueEvent(self.qctx, t2)
         assert not isinstance(evmap.handle(q2), HandlingError)
 
+        assert evmap[EventKind.RESULT][0].tag == prev_round
         assert self.qctx.round.round_id == prev_round + 1
         assert self.qctx.is_empty()
+
         assert len(evmap[EventKind.QUEUE]) == 1
-        assert len(evmap[EventKind.RESULT]) == 1
+        assert len(evmap[EventKind.ROUND_START]) == 0
 
 
 class GameEndHandlerTest(unittest.TestCase):
@@ -83,6 +98,15 @@ class GameEndHandlerTest(unittest.TestCase):
     def test_end_trigger(self):
         evmap = EventMap.new()
         evmap.register(GameEndHandler(self.round, self.games, evmap))
+        evmap.register(
+            EqHandler(
+                tag=1,
+                key="round",
+                expect=Round(round_id=self.round.round_id),
+                kind=EventKind.ROUND_END,
+                persistent=False,
+            )
+        )
 
         m = Match(
             match_id=1,
@@ -95,9 +119,10 @@ class GameEndHandlerTest(unittest.TestCase):
         assert not isinstance(ctx, Error)
         assert ctx == 1
 
-        assert self.games[1].is_complete()
+        assert self.games[ctx].is_complete()
 
         e = ResultEvent(self.games[1], m)
         assert not isinstance(evmap.handle(e), HandlingError)
 
         assert len(self.games) == 0
+        assert len(evmap[EventKind.ROUND_END]) == 0

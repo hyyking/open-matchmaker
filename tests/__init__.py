@@ -9,7 +9,7 @@ from .event.events import QueueEventsTest, ResultEventsTest, RoundEventsTest
 from .event.handlers import MatchTriggerHandlerTest, GameEndHandlerTest
 
 from .tables import PlayerTest, TeamTest, ResultTest, MatchTest, RoundTest
-from .mm import MatchMakerTest, QueueContextTest, InGameContextTest
+from .mm import MatchMakerTest, QueueContextTest, InGameContextTest, GamesTest
 
 
 class UTGroup:
@@ -57,8 +57,7 @@ GROUPS = UTGroup(
         "event": ["EventMapTest", "events", "handlers"],
         "events": ["QueueEventsTest", "ResultEventsTest", "RoundEventsTest"],
         "handlers": ["MatchTriggerHandlerTest", "GameEndHandlerTest"],
-        "mm": ["MatchMakerTest", "queuectx", "ingamectx"],
-        "queuectx": ["QueueContextTest"],
-        "ingamectx": ["InGameContextTest"],
+        "mm": ["MatchMakerTest", "GamesTest", "context"],
+        "context": ["QueueContextTest", "InGameContextTest"],
     }
 )

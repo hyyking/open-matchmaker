@@ -15,7 +15,7 @@ class EventMap(dict):
     def register(self, handler: EventHandler):
         self[handler.kind].appendleft(handler)
 
-    def __deregister(self, handler: EventHandler):
+    def deregister(self, handler: EventHandler):
         self[handler.kind].remove(handler)
 
     def poll(self, event: Event) -> Iterator[EventHandler]:
@@ -36,5 +36,5 @@ class EventMap(dict):
                 dereg.append(handler)
 
         for handler in dereg:
-            self.__deregister(handler)
+            self.deregister(handler)
         return error

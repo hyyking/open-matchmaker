@@ -1,13 +1,13 @@
 import unittest
 import copy
 
-from matchmaker.tables import Player, Team, Round, Result, Match
+from matchmaker.mm.games import Games
+from matchmaker.mm.context import InGameContext
+from matchmaker.tables import Round, Player, Team, Match, Result
 from matchmaker.error import Error
 
-from matchmaker.mm.context import InGameContext
 
-
-class InGameContextTest(unittest.TestCase):
+class GamesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.round = Round(round_id=1)
@@ -29,22 +29,22 @@ class InGameContextTest(unittest.TestCase):
 
         cls.m1 = Match(match_id=1, round=cls.round, team_one=cls.r1, team_two=cls.r2)
 
-    def test_add_result(self):
-        igctx = InGameContext(self.round, [self.m1])
+    def test_push_game(self):
+        g = Games.new()
 
+        assert not isinstance(g.push_game(InGameContext(self.round, [])), Error)
+        assert not isinstance(g.push_game(InGameContext(Round(round_id=2), [])), Error)
+
+        assert isinstance(g.push_game(InGameContext(self.round, [])), Error)
+
+    def test_add_result(self):
+        g = Games({hash(self.round.round_id): InGameContext(self.round, [self.m1])})
         m1 = copy.deepcopy(self.m1)
         m1.team_one.points = 7
         m1.team_two.points = 3
 
-        assert not isinstance(igctx.add_result(m1), Error)
-        assert isinstance(igctx.add_result(m1), Error)
+        assert not isinstance(g.add_result(m1), Error)
+        assert isinstance(g.add_result(m1), Error)
 
-        assert igctx[m1].team_one.points == 7
-        assert igctx[m1].team_two.points == 3
-
-    def test_is_complete(self):
-        igctx = InGameContext(self.round, [self.m1])
-
-        m1 = copy.deepcopy(self.m1)
-        assert not isinstance(igctx.add_result(m1), Error)
-        assert igctx.is_complete()
+        assert g[m1][m1].team_one.points == 7
+        assert g[m1][m1].team_two.points == 3
