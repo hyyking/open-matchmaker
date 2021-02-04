@@ -50,8 +50,6 @@ GROUPS = UTGroup(
         "queries": [
             "SelectQueries",
             "SpecializedQueries",
-           
-           
         ],
         "tables": ["PlayerTest", "TeamTest", "ResultTest", "MatchTest", "RoundTest"],
         "event": ["EventMapTest", "events", "handlers"],

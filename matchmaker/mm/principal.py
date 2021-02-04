@@ -5,7 +5,6 @@ import math
 from typing import List, Iterator, Tuple
 
 from .config import Config
-from .context import QueueContext, InGameContext
 
 from ..tables import Match, Round, Team, Result
 
@@ -33,7 +32,7 @@ class Principal(abc.ABC):
         self.round = round
 
     @abc.abstractmethod
-    def __call__(self, context: QueueContext) -> InGameContext:
+    def __call__(self, matches: List[Team], history: List[Match]) -> Tuple["Principal", List[Match]]:
         pass
 
 
@@ -88,10 +87,10 @@ class MaxSum(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return sum(map(lambda x: self.match_utility(x), matches))
 
-    def __call__(self, context: QueueContext) -> InGameContext:
-        p_sets = self.possible_sets(context.history, context.queue)
+    def __call__(self, teams: List[Team], history: List[Match]) -> Tuple["MaxSum", List[Match]]:
+        p_sets = self.possible_sets(history, teams)
         pick = max(p_sets, key=lambda matches: self.utility(matches))
-        return InGameContext(self.round, list(pick))
+        return (self, list(pick))
 
 
 class MinVariance(UtilityBasedPrincipal):
@@ -100,30 +99,30 @@ class MinVariance(UtilityBasedPrincipal):
         mean = sum(utilities) / len(matches)
         return sum((u - mean) ** 2 for u in utilities) / len(matches)
 
-    def __call__(self, context: QueueContext) -> InGameContext:
-        p_sets = self.possible_sets(context.history, context.queue)
+    def __call__(self, teams: List[Team], history: List[Match]) -> Tuple["MinVariance", List[Match]]:
+        p_sets = self.possible_sets(history, teams)
         pick = min(p_sets, key=lambda matches: self.variance(matches))
-        return InGameContext(self.round, list(pick))
+        return (self, list(pick))
 
 
 class MaxMin(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return min(map(lambda x: self.match_utility(x), matches))
 
-    def __call__(self, context: QueueContext) -> InGameContext:
-        p_sets = self.possible_sets(context.history, context.queue)
+    def __call__(self, teams: List[Team], history: List[Match]) -> Tuple["MaxMin", List[Match]]:
+        p_sets = self.possible_sets(history, teams)
         pick = max(p_sets, key=lambda matches: self.utility(matches))
-        return InGameContext(self.round, list(pick))
+        return (self, list(pick))
 
 
 class MinMax(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return max(map(lambda x: self.match_utility(x), matches))
 
-    def __call__(self, context: QueueContext) -> InGameContext:
-        p_sets = self.possible_sets(context.history, context.queue)
+    def __call__(self, teams: List[Team], history: List[Match]) -> Tuple["MinMax", List[Match]]:
+        p_sets = self.possible_sets(history, teams)
         pick = min(p_sets, key=lambda matches: self.utility(matches))
-        return InGameContext(self.round, list(pick))
+        return (self, list(pick))
 
 
 def get_principal(round: Round, config: Config) -> Principal:

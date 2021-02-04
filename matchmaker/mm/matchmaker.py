@@ -20,40 +20,75 @@ __all__ = "MatchMaker"
 
 
 class MatchMaker:
-    def __init__(self, config: Config, database: Database, base_round: Round):
+    def __init__(self, config: Config, base_round: Round):
         assert base_round.round_id != 0
 
         self.logger = logging.getLogger(__name__)
-        self.db = database
         self.config = config
 
         self.qctx = QueueContext(base_round, config.max_history)
         self.games = Games.new()
 
         self.evmap = EventMap.new()
-        self.evmap.register(MatchTriggerHandler(self.config, self.games, self.evmap))
+        self.register_trigger_handler()
 
         self.logger.info(f"MatchMaker initialized at round: {base_round.round_id}")
 
+    def set_threshold(self, new: int):
+        self.config.trigger_threshold = new
+
+    def set_principal(self, new: str):
+        self.config.principal = new
+
     def has_queued_player(self, player: Player) -> bool:
-        return self.qctx[player] is not None or self.games[player] is not None
+        return self.qctx[player] is not None
 
     def has_queued_team(self, team: Team) -> bool:
-        return self.qctx[team] is not None or self.games[team] is not None
+        return self.qctx[team] is not None
+    
+    def is_player_available(self, player: Player) -> bool:
+        return not self.has_queued_player(player) or self.games[player] is None
+    
+    def is_team_available(self, team: Team) -> bool:
+        return not self.has_queued_team(team) or self.games[team] is None
+
+    def reset(self):
+        self.qctx.clear()
+        self.games = Games.new()
+        self.evmap = EventMap.new()
+        self.logger.info(f"cleared queue, games and handlers")
+        self.register_trigger_handler()
+
+    def clear_history(self):
+        self.qctx.clear_history()
+    
+    def clear_queue(self):
+        self.qctx.clear()
+
+    def register_trigger_handler(self):
+        self.evmap.register(MatchTriggerHandler(self.config, self.games, self.evmap))
+
+    def get_queue(self) -> List[Team]:
+        return self.qctx.queue
+
+    def get_games(self) -> Games:
+        return self.games
 
     def get_team_of_player(self, player: Player) -> Optional[Team]:
         team = self.qctx[player]
         if team is not None:
             return team
-        team = self.games[player][player]
-        if team is not None:
-            return team
-        return None
 
-    def clear(self):
-        self.qctx.clear()
-        self.games.clear()
-        self.logger.info(f"cleared queue and games")
+        match = self.get_match_of_player(player)
+        if match is None:
+            return None
+        return match.get_team_of_player(player)
+    
+    def get_match_of_player(self, player: Player) -> Optional[Match]:
+        game = self.games[player]
+        if game is None:
+            return None
+        return game[player]
 
     def queue_team(self, team: Team) -> Failable:
         err = self.qctx.queue_team(team)

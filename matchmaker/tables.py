@@ -133,8 +133,8 @@ class Team(Table, Insertable, Loadable):
 
     elo: float = field(default=0)
 
-    def __hash__(self):
-        return hash(self.team_id)
+    def __str__(self):
+        return f"{self.name}({self.elo})"
 
     @staticmethod
     def validate(team: Optional["Team"]) -> bool:
@@ -310,6 +310,25 @@ class Match(Table, Insertable, Loadable):
             return 2
         else:
             return 0
+    
+    def get_team_of_player(self, player: Player) -> Optional[Team]:
+        assert self.team_one is not None
+        assert self.team_two is not None
+        if self.team_one is None and self.team_two is None:
+            return None
+        elif self.team_one.team is not None:
+            if self.team_one.team.has_player(player):
+                return self.team_one.team
+            else:
+                return None
+        elif self.team_two.team is not None:
+            if self.team_two.team.has_player(player):
+                return self.team_one.team
+            else:
+                return None
+        else:
+            return None
+
 
     @classmethod
     def load_from(cls, conn: Database, rhs: "Match") -> Optional["Match"]:

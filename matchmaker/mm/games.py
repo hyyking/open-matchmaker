@@ -14,9 +14,7 @@ class Games(dict):
         return cls({})
 
     def __getitem__(self, index: Index) -> Optional[InGameContext]:
-        if isinstance(index, int):
-            return super().__getitem__(index)
-        elif isinstance(index, Player) and Player.validate(index):
+        if isinstance(index, Player) and Player.validate(index):
             return self.get_context_player(index)
         elif isinstance(index, Team) and Team.validate(index):
             assert index.player_one is not None and index.player_two is not None
@@ -40,9 +38,7 @@ class Games(dict):
                 return t2
             return None
         else:
-            raise KeyError(
-                "Invalid index, use tuple of team, player, match or context key"
-            )
+            return super().__getitem__(index)
 
     def get_context_player(self, player: Player) -> Optional[InGameContext]:
         for context in self.values():

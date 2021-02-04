@@ -9,6 +9,8 @@ from .error import (
     GameEndedError,
     DuplicateResultError,
 )
+from .principal import Principal
+
 from ..tables import Player, Team, Match, Result, Round, Index
 from ..error import Failable
 
@@ -35,7 +37,7 @@ class QueueContext:
     def __getitem__(self, index: Index) -> Optional[Team]:
         if isinstance(index, int):
             return self.queue[index]
-        if isinstance(index, Player) and Player.validate(index):
+        elif isinstance(index, Player) and Player.validate(index):
             return self.get_team_player(index)
         elif isinstance(index, Team) and Team.validate(index):
             assert index.player_one is not None and index.player_two is not None
@@ -64,6 +66,9 @@ class QueueContext:
         self.players.clear()
         self.queue.clear()
 
+    def clear_history(self):
+        self.history.clear()
+
     def is_empty(self) -> bool:
         return len(self.players) == 0 and len(self.queue) == 0
 
@@ -82,9 +87,13 @@ class QueueContext:
 
         assert team.player_one is not None
         assert team.player_two is not None
-
-        if self[team.player_one] is not None or self[team.player_two] is not None:
-            return AlreadyQueuedError("Players are already queued", team)
+        
+        p_one = self[team.player_one]
+        p_two = self[team.player_one]
+        if p_one is not None:
+            return AlreadyQueuedError("Player is already queued", team.player_one, p_one)
+        if p_two is not None:
+            return AlreadyQueuedError("Player is already queued", team.player_two, p_two)
 
         self.players.add(team.player_one)
         self.players.add(team.player_two)
@@ -126,18 +135,18 @@ class InGameState(Enum):
 
 
 class InGameContext:
-    round: Round
-    results: Set[Team]
+    results: Set[Player]
     matches: List[Match]
+    principal: Principal
     state: InGameState
 
-    def __init__(self, round: Round, matches: List[Match]):
-        self.round = round
+    def __init__(self, principal: Principal, matches: List[Match]):
         self.matches = matches
         self.results = set()
+        self.principal = principal
         self.state = InGameState.INGAME
 
-        self.key = hash(round.round_id)
+        self.key = hash(self.round.round_id)
 
     def __repr__(self):
         return f"InGameContext(state={self.state}, round_id={self.round.round_id})"
@@ -165,10 +174,13 @@ class InGameContext:
             if t2 is not None:
                 return t2
             return None
+        elif isinstance(index, int):
+            return self.matches[index]
         else:
-            raise KeyError(
-                "Invalid index, use tuple of team, player, match or context key"
-            )
+            raise KeyError("InGameContext has received a bad index")
+    @property
+    def round(self) -> Round:
+        return self.principal.round
 
     def is_complete(self) -> bool:
         return self.state is InGameState.ENDED
@@ -198,17 +210,23 @@ class InGameContext:
         assert r2 is not None
         assert r1.team is not None
         assert r2.team is not None
-
-        if r1.team in self.results or r2.team in self.results:
+        assert r1.team.player_one is not None
+        assert r1.team.player_two is not None
+        assert r2.team.player_one is not None
+        assert r2.team.player_two is not None
+        players = {r1.team.player_one, r1.team.player_two, r2.team.player_one, r2.team.player_two}
+        if len(self.results & players) != 0:
             return DuplicateResultError("Result is already in the context", result)
 
         for match in self.matches:
             if match == result:
-                self.results.add(r1.team)
-                self.results.add(r2.team)
+                self.results.add(r1.team.player_one)
+                self.results.add(r1.team.player_two)
+                self.results.add(r2.team.player_one)
+                self.results.add(r2.team.player_two)
                 match.team_one = r1
                 match.team_two = r2
-                if len(self.results) == 2 * len(self.matches):
+                if len(self.results) == 4 * len(self.matches):
                     self.state = InGameState.ENDED
                 return None
         return None

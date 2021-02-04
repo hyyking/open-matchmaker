@@ -1,6 +1,6 @@
 from typing import Union, TypeVar
 
-from ..tables import Team, Match
+from ..tables import Team, Match, Player
 from ..operations import Table
 from ..error import Error
 
@@ -34,8 +34,9 @@ class NotQueuedError(Error):
 
 
 class AlreadyQueuedError(Error):
-    def __init__(self, message: str, team: Team):
+    def __init__(self, message: str, player: Player, team: Team):
         super().__init__(message)
+        self.player = player
         self.team = team
 
 

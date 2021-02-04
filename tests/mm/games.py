@@ -42,7 +42,7 @@ class GamesTest(unittest.TestCase):
         m1 = copy.deepcopy(self.m1)
         m1.team_one.points = 7
         m1.team_two.points = 3
-
+        print(g[m1].results)
         assert not isinstance(g.add_result(m1), Error)
         assert isinstance(g.add_result(m1), Error)
 

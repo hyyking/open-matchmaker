@@ -85,7 +85,8 @@ class MatchTriggerHandler(EventHandler):
             end_time=None,
             participants=len(ctx.context),
         )
-        context = get_principal(r, self.config)(ctx.context)
+        principal, matches = get_principal(r, self.config)(ctx.context.queue, ctx.context.history)
+        context = InGameContext(principal, matches)
 
         ctx.context.clear()
         assert ctx.context.is_empty()

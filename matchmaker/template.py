@@ -86,6 +86,12 @@ class Sum(AsStatement):
     def render(self):
         return f"SUM({render_statement(self.header)})"
 
+@dataclass
+class Max(AsStatement):
+    header: Statement
+
+    def render(self):
+        return f"MAX({render_statement(self.header)})"
 
 @dataclass
 class InnerJoin(AsStatement):
@@ -154,7 +160,7 @@ class ColumnQuery(AsStatement):
 
     def join_headers(self) -> str:
         if not isinstance(self.headers, list):
-            self.header = [self.headers]
+            self.headers = [self.headers]
         return ",".join(map(render_statement, self.headers))
 
     def render_statements(self) -> str:

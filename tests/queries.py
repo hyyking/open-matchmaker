@@ -1,6 +1,6 @@
 import unittest
 
-from .generate import no_teams
+from .generate import no_teams, no_rounds
 
 from matchmaker import Database
 from matchmaker.template import *
@@ -31,6 +31,7 @@ class SelectQueries(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.db = Database("tests/full_mockdb.sqlite3")
+        cls.empty_db = Database("tests/empty_mockdb.sqlite3")
 
     def test_all_teams_for_player(self):
         current = Player(discord_id=1, name="Player_1")
@@ -90,3 +91,13 @@ class SelectQueries(unittest.TestCase):
         name_one = f"Team_{one.discord_id}_{two.discord_id}"
         name_two = f"Team_{two.discord_id}_{one.discord_id}"
         assert name == name_one or name == name_two
+
+
+    def test_last_round(self):
+        query = ColumnQuery(QueryKind.SELECT, "turn", Max("round_id"), [])
+
+        round_id = self.db.execute(query, "RegisterFetchTeamName").fetchone()[0]
+        assert round_id == no_rounds()
+
+        round_id = self.empty_db.execute(query, "RegisterFetchTeamName").fetchone()[0]
+        assert round_id is None

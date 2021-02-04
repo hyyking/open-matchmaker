@@ -19,7 +19,7 @@ run: $(DATABASE) $(CONFIG) $(SQL)
 		       --config   $(CONFIG)
 
 $(CONFIG):
-	@[[ ! -a $@ ]] && python -m bot --dump_config > $(CONFIG)
+	@[[ ! -f $@ ]] && python -m bot --dump-config > $(CONFIG)
 
 $(DATABASE): $(SQL)
 	sqlite3 $@ < $(SQL)

@@ -14,6 +14,6 @@
 	    "duty_cycle": 1
 	},
         "trigger_threshold": 10,
-	"principal": "sum"
+	"principal": "max_sum"
     }
 }
