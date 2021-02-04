@@ -24,9 +24,8 @@ def from_file(path: str) -> Tuple[BotConfig, MatchMakerConfig]:
         cfg = json.loads(config.read())
 
     botcfg, mmcfg = default()
-
-    if "mm" in cfg:
-        mmcfg.__dict__.update(cfg["mm"])
+    if "matchmaker" in cfg:
+        mmcfg.__dict__.update(cfg["matchmaker"])
     if "bot" in cfg:
         botcfg.__dict__.update(cfg["bot"])
 

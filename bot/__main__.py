@@ -1,6 +1,7 @@
-import os, sys, logging, argparse, logging, json
+import os, sys, logging, argparse, json
+from typing import Optional
 
-from bot import MatchMakerBot, MatchMaker, Database, config as cfg, cogs
+from bot import MatchMakerBot, Database, config as cfg, cogs
 
 
 def parse() -> argparse.ArgumentParser:
@@ -8,7 +9,7 @@ def parse() -> argparse.ArgumentParser:
     parser.add_argument("--loglevel", default="info", help="Sets log level")
     parser.add_argument("--config", type=str, default=None, help="Sets config file")
     parser.add_argument(
-        "--dump_config", action="store_true", help="Dumps config to stdout"
+        "--dump-config", action="store_true", help="Dumps config to stdout"
     )
     parser.add_argument(
         "--database", type=str, default="matchmaker.sqlite3", help="Sets database path"
@@ -41,11 +42,10 @@ def log(log_file: str, level: str):
     return logging.getLogger(__name__)
 
 
-def main(dump_config: bool, loglevel: str, database: str, config: str):
+def main(dump_config: bool, loglevel: str, database: str, config: Optional[str]):
     logger = log("matchmaker.log", loglevel)
 
     botcfg, mmcfg = cfg.from_file(config) if config is not None else cfg.default()
-
     if dump_config:
         cfgmap = {"bot": botcfg.__dict__, "matchmaker": mmcfg.__dict__}
         print(json.dumps(cfgmap, indent=4))
@@ -53,8 +53,8 @@ def main(dump_config: bool, loglevel: str, database: str, config: str):
 
     bot = MatchMakerBot(
         botcfg,
-        MatchMaker(mmcfg, Database(database)),
-        [cogs.PlayerCog(), cogs.AdminCog()],
+        mmcfg,
+        Database(database),
     )
 
     token = os.getenv("DISCORD_TOKEN")
