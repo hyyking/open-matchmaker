@@ -2,7 +2,7 @@
 
 import unittest
 
-from .queries import SelectQueries, SpecializedQueries, LoadQueries, ExistsQueries
+from .queries import SelectQueries, SpecializedQueries
 
 from .event import EventMapTest
 from .event.events import QueueEventsTest, ResultEventsTest, RoundEventsTest
@@ -50,8 +50,8 @@ GROUPS = UTGroup(
         "queries": [
             "SelectQueries",
             "SpecializedQueries",
-            "LoadQueries",
-            "ExistsQueries",
+           
+           
         ],
         "tables": ["PlayerTest", "TeamTest", "ResultTest", "MatchTest", "RoundTest"],
         "event": ["EventMapTest", "events", "handlers"],
