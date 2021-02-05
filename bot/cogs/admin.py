@@ -3,11 +3,11 @@ import logging
 from matchmaker.mm.games import Games
 from discord.ext import commands
 
-from ..converters import ToPrincipal
 from ..ctx import BotContext
 
 
 __all__ = ("AdminCog",)
+
 
 def format_games(games: Games) -> str:
     output = ""
@@ -20,26 +20,27 @@ def format_games(games: Games) -> str:
             assert match.team_two.team is not None
             assert match.team_one.team.name is not None
             assert match.team_two.team.name is not None
-
             team_one = str(match.team_one.team)
             team_two = str(match.team_two.team)
-            fgame = f"\n\t{match.match_id} | {team_one} VS {team_two}"
-
+            fgame += f"\n\t{match.match_id} | {team_one} VS {team_two}"
         output += f"\n({key}): {fgame}"
     return output
 
 
 class AdminCog(commands.Cog, BotContext):
-    @commands.command()
+    @commands.command(require_var_positional=True)
     @commands.has_role("matchmaker_admin")
-    async def set_threshold(self, ctx, new: int):
-        raise NotImplementedError
+    async def set_threshold(self, ctx, new_value: int):
+        ctx.bot.mm.set_threshold(new_value)
+        message = ctx.bot.fmtok(f"Threshold has been set to '{new_value}'")
+        await ctx.message.channel.send(content=message, reference=ctx.message)
 
-
-    @commands.command()
+    @commands.command(require_var_positional=True)
     @commands.has_role("matchmaker_admin")
-    async def set_principal(self, ctx, new: ToPrincipal):
-        raise NotImplementedError
+    async def set_principal(self, ctx, new_value: str):
+        ctx.bot.mm.set_principal(new_value)
+        message = ctx.bot.fmtok(f"Principal has been set to '{new_value}'")
+        await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
     @commands.has_role("matchmaker_admin")

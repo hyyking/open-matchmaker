@@ -9,6 +9,7 @@ __all__ = "BotContext"
 
 NOTINIT = KeyError("MatchMakerCog is not initialized")
 
+
 @dataclass
 class BotContext:
     db: Database

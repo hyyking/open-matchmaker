@@ -30,7 +30,9 @@ class GamesTest(unittest.TestCase):
         cls.r1 = Result(result_id=1, team=cls.t1, points=0)
         cls.r2 = Result(result_id=2, team=cls.t2, points=0)
 
-        cls.m1 = Match(match_id=1, round=cls.principal1.round, team_one=cls.r1, team_two=cls.r2)
+        cls.m1 = Match(
+            match_id=1, round=cls.principal1.round, team_one=cls.r1, team_two=cls.r2
+        )
 
     def test_push_game(self):
         g = Games.new()
@@ -41,7 +43,13 @@ class GamesTest(unittest.TestCase):
         assert isinstance(g.push_game(InGameContext(self.principal1, [])), Error)
 
     def test_add_result(self):
-        g = Games({hash(self.principal1.round.round_id): InGameContext(self.principal1, [self.m1])})
+        g = Games(
+            {
+                hash(self.principal1.round.round_id): InGameContext(
+                    self.principal1, [self.m1]
+                )
+            }
+        )
         m1 = copy.deepcopy(self.m1)
         m1.team_one.points = 7
         m1.team_two.points = 3

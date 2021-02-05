@@ -92,7 +92,6 @@ class SelectQueries(unittest.TestCase):
         name_two = f"Team_{two.discord_id}_{one.discord_id}"
         assert name == name_one or name == name_two
 
-
     def test_last_round(self):
         query = ColumnQuery(QueryKind.SELECT, "turn", Max("round_id"), [])
 

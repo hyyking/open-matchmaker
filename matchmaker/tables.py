@@ -310,7 +310,7 @@ class Match(Table, Insertable, Loadable):
             return 2
         else:
             return 0
-    
+
     def get_team_of_player(self, player: Player) -> Optional[Team]:
         assert self.team_one is not None
         assert self.team_two is not None
@@ -328,7 +328,6 @@ class Match(Table, Insertable, Loadable):
                 return None
         else:
             return None
-
 
     @classmethod
     def load_from(cls, conn: Database, rhs: "Match") -> Optional["Match"]:

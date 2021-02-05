@@ -88,13 +88,17 @@ class QueueContext:
 
         assert team.player_one is not None
         assert team.player_two is not None
-        
+
         p_one = self[team.player_one]
         p_two = self[team.player_one]
         if p_one is not None:
-            return AlreadyQueuedError("Player is already queued", team.player_one, p_one)
+            return AlreadyQueuedError(
+                "Player is already queued", team.player_one, p_one
+            )
         if p_two is not None:
-            return AlreadyQueuedError("Player is already queued", team.player_two, p_two)
+            return AlreadyQueuedError(
+                "Player is already queued", team.player_two, p_two
+            )
 
         self.players.add(team.player_one)
         self.players.add(team.player_two)
@@ -180,11 +184,11 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
             return self.matches[index]
         else:
             raise KeyError("InGameContext has received a bad index")
-    
+
     @property
     def round(self) -> Round:
         return self.principal.round
-    
+
     @property
     def k_factor(self) -> float:
         return self.principal.config.k_factor
@@ -222,7 +226,12 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
         assert r2.team.player_one is not None
         assert r2.team.player_two is not None
 
-        players = {r1.team.player_one, r1.team.player_two, r2.team.player_one, r2.team.player_two}
+        players = {
+            r1.team.player_one,
+            r1.team.player_two,
+            r2.team.player_one,
+            r2.team.player_two,
+        }
         if len(self.results & players) != 0:
             return DuplicateResultError("Result is already in the context", result)
 
@@ -230,7 +239,7 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
             match = self.matches[self.matches.index(result)]
         except ValueError:
             return MatchNotFoundError("Match is missing", result)
-            
+
         assert match.team_one is not None
         assert match.team_two is not None
 
@@ -238,13 +247,12 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
         self.results.add(r1.team.player_two)
         self.results.add(r2.team.player_one)
         self.results.add(r2.team.player_two)
-        
+
         r1.delta = self.k_factor * (r1.points - match.team_one.points)
         r2.delta = self.k_factor * (r2.points - match.team_two.points)
 
         match.team_one = r1
         match.team_two = r2
-        
+
         if len(self.results) == 4 * len(self.matches):
             self.state = InGameState.ENDED
-        return None

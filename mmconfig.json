@@ -13,7 +13,7 @@
 	    "active": 3,
 	    "duty_cycle": 1
 	},
-        "trigger_threshold": 10,
+        "trigger_threshold": 2,
 	"principal": "max_sum"
     }
 }

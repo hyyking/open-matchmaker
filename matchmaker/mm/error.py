@@ -46,11 +46,11 @@ class GameAlreadyExistError(Error):
         self.key = key
 
 
-
 class GameEndedError(Error):
     def __init__(self, message: str, result: Match):
         super().__init__(message)
         self.result = result
+
 
 class MatchNotFoundError(Error):
     def __init__(self, message: str, result: Match):

@@ -16,11 +16,10 @@ from matchmaker.template import (
 )
 
 from ..ctx import BotContext
-from ..converters import ToPlayer
+from ..converters import ToPlayer, ToRegisteredTeam
 
 
 class DatabaseCog(commands.Cog, BotContext):
-
     @commands.command()
     async def register(self, ctx, teammate: ToPlayer, *, team_name: str):
         bot = ctx.bot
@@ -79,7 +78,6 @@ class DatabaseCog(commands.Cog, BotContext):
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
 
-
     @commands.command()
     async def teams(self, ctx, who: Optional[ToPlayer] = None):
         current = Player(ctx.message.author.id, ctx.message.author.name)
@@ -89,51 +87,29 @@ class DatabaseCog(commands.Cog, BotContext):
 
         query = ColumnQuery(
             QueryKind.SELECT,
-            "team",
+            "team_details_with_delta",
+            "*",
             [
-                "team.team_id",
-                "team.name",
-                "p1.discord_id",
-                "p1.name",
-                "p2.discord_id",
-                "p2.name",
-            ],
-            [
-                InnerJoin(
-                    Alias("player", "p1"), on=Eq("p1.discord_id ", "team.player_one")
-                ),
-                InnerJoin(
-                    Alias("player", "p2"), on=Eq("p2.discord_id ", "team.player_two")
-                ),
                 Where(
                     Or(
-                        Eq("player_one", current.discord_id),
-                        Eq("player_two", current.discord_id),
+                        Eq("player_one_id", current.discord_id),
+                        Eq("player_two_id", current.discord_id),
                     )
                 ),
             ],
         )
 
-        def to_team(query):
-            tid, tn, p1id, p1name, p2id, p2name = query
-            return Team(
-                team_id=tid,
-                name=tn,
-                player_one=Player(p1id, p1name),
-                player_two=Player(p2id, p2name),
-                elo=ctx.bot.mm.config.base_elo,
-            )
+        def format_team(query):
+            tid, tn, _, p1name, _, p2name, delta = query
+            elo = ctx.bot.mm.config.base_elo + delta
+            return f"{tid} | {tn}({elo}): {p1name} & {p2name}"
 
-        q = self.db.execute(query, "FetchPlayerTeams")
+        q = self.db.execute(query, "FetchTeamsWithElo")
         assert q is not None
-        content = ""
-        for team in map(to_team, q.fetchall()):
-            q = self.db.execute(Result.elo_for_team(team), "FetchTeamElo")
-            assert q is not None
-            delta = q.fetchone()[0]
-            team.elo += delta if delta is not None else 0
-            content += f"{team.team_id} | {team.name}({team.elo}): {team.player_one.name} \
-& {team.player_two.name}\n"
-
-        message = f"```{content}```"
+        content = "\n".join(map(format_team, q.fetchall()))
+        message = f"""```{content}\n```"""
         await ctx.message.channel.send(content=message, reference=ctx.message)
+
+    @commands.command()
+    async def stats(self, ctx, who: Optional[ToRegisteredTeam] = None):
+        raise NotImplementedError

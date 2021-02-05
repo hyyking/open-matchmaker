@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 
 from ..mm.context import InGameContext, QueueContext
 from ..mm.games import Games
@@ -20,6 +21,7 @@ class GameEndHandler(EventHandler):
         self.games = games
         self.round: Round = r
         self.evmap = evmap
+        self.logger = logging.getLogger("matchmaker.event")
 
     @property
     def tag(self):
@@ -33,6 +35,7 @@ class GameEndHandler(EventHandler):
         if (
             not isinstance(ctx.context, InGameContext)
             or ctx.context.key not in self.games
+            or ctx.context.round.round_id != self.round.round_id
         ):
             return False
         return ctx.context.is_complete()
@@ -46,6 +49,8 @@ class GameEndHandler(EventHandler):
 
         self.games.pop(ctx.context.key)
         self.round.end_time = datetime.now()
+
+        self.logger.info(f"Round {self.round.round_id} has ended")
         return self.evmap.handle(RoundEndEvent(ctx.context, self.round))
 
 
@@ -54,6 +59,7 @@ class MatchTriggerHandler(EventHandler):
         self.evmap = evmap
         self.games = games
         self.config = config
+        self.logger = logging.getLogger("matchmaker.event")
 
     @property
     def kind(self) -> EventKind:
@@ -85,7 +91,9 @@ class MatchTriggerHandler(EventHandler):
             end_time=None,
             participants=len(ctx.context),
         )
-        principal, matches = get_principal(r, self.config)(ctx.context.queue, ctx.context.history)
+        principal, matches = get_principal(r, self.config)(
+            ctx.context.queue, ctx.context.history
+        )
         context = InGameContext(principal, matches)
 
         ctx.context.clear()
@@ -98,4 +106,5 @@ class MatchTriggerHandler(EventHandler):
         ctx.context.round.round_id += 1
 
         self.evmap.register(GameEndHandler(r, self.games, self.evmap))
+        self.logger.info(f"Round {r.round_id} has started")
         return self.evmap.handle(RoundStartEvent(context, r))

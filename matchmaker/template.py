@@ -86,12 +86,14 @@ class Sum(AsStatement):
     def render(self):
         return f"SUM({render_statement(self.header)})"
 
+
 @dataclass
 class Max(AsStatement):
     header: Statement
 
     def render(self):
         return f"MAX({render_statement(self.header)})"
+
 
 @dataclass
 class InnerJoin(AsStatement):

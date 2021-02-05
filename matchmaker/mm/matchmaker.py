@@ -16,7 +16,7 @@ from ..error import Failable, Error
 from ..db import Database
 from ..tables import Player, Team, Match, Result, Round
 
-__all__ = "MatchMaker"
+__all__ = ("MatchMaker",)
 
 
 class MatchMaker:
@@ -45,10 +45,10 @@ class MatchMaker:
 
     def has_queued_team(self, team: Team) -> bool:
         return self.qctx[team] is not None
-    
+
     def is_player_available(self, player: Player) -> bool:
         return not self.has_queued_player(player) or self.games[player] is None
-    
+
     def is_team_available(self, team: Team) -> bool:
         return not self.has_queued_team(team) or self.games[team] is None
 
@@ -61,7 +61,7 @@ class MatchMaker:
 
     def clear_history(self):
         self.qctx.clear_history()
-    
+
     def clear_queue(self):
         self.qctx.clear()
 
@@ -83,7 +83,7 @@ class MatchMaker:
         if match is None:
             return None
         return match.get_team_of_player(player)
-    
+
     def get_match_of_player(self, player: Player) -> Optional[Match]:
         game = self.games[player]
         if game is None:
@@ -96,11 +96,7 @@ class MatchMaker:
             return err
 
         self.logger.info(f"queued ({team.team_id}) {team.name}")
-
-        err = self.evmap.handle(QueueEvent(self.qctx, team))
-        if isinstance(err, Error):
-            return err
-        return None
+        return self.evmap.handle(QueueEvent(self.qctx, team))
 
     def dequeue_team(self, team: Team) -> Failable:
         err = self.qctx.dequeue_team(team)
@@ -119,5 +115,5 @@ class MatchMaker:
         if isinstance(err, Error):
             return err
 
-        self.logger.info(f"handled result for match {match}")
+        self.logger.info(f"handled result for match {match.match_id}")
         return self.evmap.handle(ResultEvent(self.games[key], match))

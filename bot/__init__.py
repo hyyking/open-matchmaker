@@ -14,6 +14,7 @@ __all__ = ("MatchMakerBot", "Database", "MatchMaker")
 
 COGS = [AdminCog, DatabaseCog, MatchMakerCog]
 
+
 class MatchMakerBot(commands.Bot):
     def __init__(self, config: BotConfig, mmcfg: Config, db: Database):
         super().__init__(command_prefix=config.command_prefix)
@@ -22,15 +23,14 @@ class MatchMakerBot(commands.Bot):
         self.db = db
         self.config = config
 
-
         query = ColumnQuery(QueryKind.SELECT, "turn", Max("round_id"), [])
         q = self.db.execute(query, "QueryInitialRound")
         assert q is not None
-        
+
         round_id = q.fetchone()[0]
         round_id = 0 if round_id is None else round_id
-        
-        self.mm = MatchMaker(mmcfg, Round(round_id=round_id+1))
+
+        self.mm = MatchMaker(mmcfg, Round(round_id=round_id + 1))
 
         for cog in COGS:
             self.add_cog(cog(self.db, self.mm))
