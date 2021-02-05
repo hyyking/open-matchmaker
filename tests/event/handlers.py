@@ -4,6 +4,7 @@ from .eq_handler import EqHandler
 
 from matchmaker.mm.games import Games
 from matchmaker.mm.context import QueueContext, InGameContext
+from matchmaker.mm.principal import get_principal
 from matchmaker.mm import Config
 
 from matchmaker.tables import Player, Team, Round, Match, Result
@@ -93,7 +94,8 @@ class GameEndHandlerTest(unittest.TestCase):
             team_one=Result(result_id=1, team=cls.t1),
             team_two=Result(result_id=2, team=cls.t2),
         )
-        cls.games = Games({cls.round.round_id: InGameContext(cls.round, [m])})
+        cls.principal = get_principal(cls.round, Config())
+        cls.games = Games({cls.round.round_id: InGameContext(cls.principal, [m])})
 
     def test_end_trigger(self):
         evmap = EventMap.new()

@@ -50,7 +50,7 @@ class UtilityBasedPrincipal(Principal):
         turn = self.round.round_id * 100
         d = self.config.period["duty_cycle"] / 5
         t = self.config.period["active"]
-        return max((-1) ** int((turn % t) / t >= d), 0)
+        return -1 ** int((turn % t) / t >= d)
 
     def match_utility(self, match: Match) -> float:
         """ compute principal's utility of the match """
@@ -59,9 +59,9 @@ class UtilityBasedPrincipal(Principal):
         assert match.team_one.team is not None
         assert match.team_two.team is not None
 
-        escore1 = self.expected_score(match.team_one.team, match.team_two.team)
-        escore2 = self.expected_score(match.team_two.team, match.team_one.team)
-        distance = math.exp(-abs(escore1 - escore2))  # ]0; 1[
+        match.team_one.points = self.expected_score(match.team_one.team, match.team_two.team)
+        match.team_two.points = self.expected_score(match.team_two.team, match.team_one.team)
+        distance = math.exp(-abs(match.team_one.points - match.team_two.points))  # ]0; 1[
         return distance + (self.period() / distance)  # ]0; +inf[
 
     def possible_sets(

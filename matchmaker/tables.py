@@ -209,8 +209,8 @@ class Team(Table, Insertable, Loadable):
 class Result(Table, Insertable, Loadable):
     result_id: int = field(default=0)
     team: Optional[Team] = field(default=None)
-    points: Optional[int] = field(default=0)
-    delta: Optional[float] = field(default=0.0)
+    points: float = field(default=0.0)
+    delta: float = field(default=0.0)
 
     @staticmethod
     def validate(result: Optional["Result"]) -> bool:

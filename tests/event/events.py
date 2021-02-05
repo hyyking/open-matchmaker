@@ -5,6 +5,8 @@ from .eq_handler import EqHandler
 from matchmaker.tables import Round, Team, Match, Result
 
 from matchmaker.mm.context import QueueContext, InGameContext
+from matchmaker.mm.principal import get_principal
+from matchmaker.mm.config import Config
 
 from matchmaker.event.events import (
     QueueEvent,
@@ -55,7 +57,8 @@ class QueueEventsTest(unittest.TestCase):
 class ResultEventsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.igctx = InGameContext(Round(round_id=1), None)
+        principal = get_principal(Round(round_id=1), Config())
+        cls.igctx = InGameContext(principal, None)
 
     def test_result(self):
         evmap = EventMap.new()
@@ -75,7 +78,8 @@ class ResultEventsTest(unittest.TestCase):
 class RoundEventsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.igctx = InGameContext(Round(round_id=1), None)
+        principal = get_principal(Round(round_id=1), Config())
+        cls.igctx = InGameContext(principal, None)
 
     def test_round_start(self):
         evmap = EventMap.new()

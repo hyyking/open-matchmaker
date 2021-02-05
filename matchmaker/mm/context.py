@@ -8,6 +8,7 @@ from .error import (
     NotQueuedError,
     GameEndedError,
     DuplicateResultError,
+    MatchNotFoundError,
 )
 from .principal import Principal
 
@@ -149,7 +150,8 @@ class InGameContext:
         self.key = hash(self.round.round_id)
 
     def __repr__(self):
-        return f"InGameContext(state={self.state}, round_id={self.round.round_id})"
+        return f"InGameContext(state={self.state},\
+round_id={self.round.round_id}, principal={type(self.principal).__name__})"
 
     def __getitem__(self, index: Index) -> Optional[Match]:
         if isinstance(index, Player) and Player.validate(index):
@@ -178,9 +180,14 @@ class InGameContext:
             return self.matches[index]
         else:
             raise KeyError("InGameContext has received a bad index")
+    
     @property
     def round(self) -> Round:
         return self.principal.round
+    
+    @property
+    def k_factor(self) -> float:
+        return self.principal.config.k_factor
 
     def is_complete(self) -> bool:
         return self.state is InGameState.ENDED
@@ -214,19 +221,30 @@ class InGameContext:
         assert r1.team.player_two is not None
         assert r2.team.player_one is not None
         assert r2.team.player_two is not None
+
         players = {r1.team.player_one, r1.team.player_two, r2.team.player_one, r2.team.player_two}
         if len(self.results & players) != 0:
             return DuplicateResultError("Result is already in the context", result)
 
-        for match in self.matches:
-            if match == result:
-                self.results.add(r1.team.player_one)
-                self.results.add(r1.team.player_two)
-                self.results.add(r2.team.player_one)
-                self.results.add(r2.team.player_two)
-                match.team_one = r1
-                match.team_two = r2
-                if len(self.results) == 4 * len(self.matches):
-                    self.state = InGameState.ENDED
-                return None
+        try:
+            match = self.matches[self.matches.index(result)]
+        except ValueError:
+            return MatchNotFoundError("Match is missing", result)
+            
+        assert match.team_one is not None
+        assert match.team_two is not None
+
+        self.results.add(r1.team.player_one)
+        self.results.add(r1.team.player_two)
+        self.results.add(r2.team.player_one)
+        self.results.add(r2.team.player_two)
+        
+        r1.delta = self.k_factor * (r1.points - match.team_one.points)
+        r2.delta = self.k_factor * (r2.points - match.team_two.points)
+
+        match.team_one = r1
+        match.team_two = r2
+        
+        if len(self.results) == 4 * len(self.matches):
+            self.state = InGameState.ENDED
         return None
