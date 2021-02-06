@@ -1,4 +1,3 @@
-from scipy import signal
 import matplotlib.pyplot as plot
 import numpy as np
 
@@ -9,9 +8,9 @@ t = np.linspace(0, 100, 100, endpoint=True)
 
 
 def square(t):
-    T = 30
-    D = 0.2
-    return max((-1) ** int(((t * 1000) % T) / T >= D), 0)
+    T = 3
+    D = 0.5
+    return max((-1) ** int((t % T) / T >= D), 0)
 
 
 plot.plot(t, list(map(square, t)))

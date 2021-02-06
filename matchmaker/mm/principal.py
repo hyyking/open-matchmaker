@@ -53,7 +53,7 @@ class UtilityBasedPrincipal(Principal):
         turn = self.round.round_id * 100
         d = self.config.period["duty_cycle"] / 5
         t = self.config.period["active"]
-        return -(1 ** int((turn % t) / t >= d))
+        return max((-1) ** int((turn % t) / t >= d), 0)
 
     def match_utility(self, match: Match) -> float:
         """ compute principal's utility of the match """
