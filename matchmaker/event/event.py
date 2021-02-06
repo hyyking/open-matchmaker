@@ -28,7 +28,6 @@ class EventKind(Enum):
 class EventContext:
     context: Union[QueueContext, InGameContext]
 
-    db: Optional[Database] = field(default=None)
     player: Optional[Player] = field(default=None)
     team: Optional[Team] = field(default=None)
     match: Optional[Match] = field(default=None)

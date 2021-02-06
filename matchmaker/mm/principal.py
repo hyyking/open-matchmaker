@@ -31,10 +31,11 @@ class Principal(abc.ABC):
         self.config = config
         self.round = round
 
+    def __str__(self):
+        return type(self).__name__
+
     @abc.abstractmethod
-    def __call__(
-        self, matches: List[Team], history: List[Match]
-    ) -> Tuple["Principal", List[Match]]:
+    def __call__(self, matches: List[Team], history: List[Match]) -> List[Match]:
         pass
 
 
@@ -95,12 +96,10 @@ class MaxSum(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return sum(map(lambda x: self.match_utility(x), matches))
 
-    def __call__(
-        self, teams: List[Team], history: List[Match]
-    ) -> Tuple["MaxSum", List[Match]]:
+    def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
         pick = max(p_sets, key=lambda matches: self.utility(matches))
-        return (self, list(pick))
+        return list(pick)
 
 
 class MinVariance(UtilityBasedPrincipal):
@@ -109,36 +108,30 @@ class MinVariance(UtilityBasedPrincipal):
         mean = sum(utilities) / len(matches)
         return sum((u - mean) ** 2 for u in utilities) / len(matches)
 
-    def __call__(
-        self, teams: List[Team], history: List[Match]
-    ) -> Tuple["MinVariance", List[Match]]:
+    def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
         pick = min(p_sets, key=lambda matches: self.variance(matches))
-        return (self, list(pick))
+        return list(pick)
 
 
 class MaxMin(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return min(map(lambda x: self.match_utility(x), matches))
 
-    def __call__(
-        self, teams: List[Team], history: List[Match]
-    ) -> Tuple["MaxMin", List[Match]]:
+    def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
         pick = max(p_sets, key=lambda matches: self.utility(matches))
-        return (self, list(pick))
+        return list(pick)
 
 
 class MinMax(UtilityBasedPrincipal):
     def utility(self, matches: Tuple[Match, ...]):
         return max(map(lambda x: self.match_utility(x), matches))
 
-    def __call__(
-        self, teams: List[Team], history: List[Match]
-    ) -> Tuple["MinMax", List[Match]]:
+    def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
         pick = min(p_sets, key=lambda matches: self.utility(matches))
-        return (self, list(pick))
+        return list(pick)
 
 
 def get_principal(round: Round, config: Config) -> Principal:
@@ -153,6 +146,6 @@ def get_principal(round: Round, config: Config) -> Principal:
         logger = logging.getLogger(__name__)
         logger.warn(f"Principal '{config.principal}' not found using 'max_sum' instead")
         logger.info(f"use one of {list(principals.keys())}")
-        return principals["max_sum"]
+        return principals["max_sum"]()
     else:
         return principal()

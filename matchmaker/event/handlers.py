@@ -67,7 +67,7 @@ class MatchTriggerHandler(EventHandler):
 
     @property
     def tag(self) -> int:
-        return 0
+        return hash(type(self).__name__)
 
     def is_ready(self, ctx: EventContext) -> bool:
         if not isinstance(ctx.context, QueueContext):
@@ -91,9 +91,8 @@ class MatchTriggerHandler(EventHandler):
             end_time=None,
             participants=len(ctx.context),
         )
-        principal, matches = get_principal(r, self.config)(
-            ctx.context.queue, ctx.context.history
-        )
+        principal = get_principal(r, self.config)
+        matches = principal(ctx.context.queue, ctx.context.history)
         context = InGameContext(principal, matches)
 
         ctx.context.clear()

@@ -256,3 +256,4 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
 
         if len(self.results) == 4 * len(self.matches):
             self.state = InGameState.ENDED
+        return None

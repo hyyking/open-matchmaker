@@ -7,7 +7,7 @@ from .context import QueueContext, InGameContext
 from .config import Config
 from .games import Games
 
-from ..event import EventMap
+from ..event import EventMap, EventHandler
 from ..event.events import QueueEvent, DequeueEvent, ResultEvent
 from ..event.error import HandlingError
 from ..event.handlers import MatchTriggerHandler
@@ -117,3 +117,7 @@ class MatchMaker:
 
         self.logger.info(f"handled result for match {match.match_id}")
         return self.evmap.handle(ResultEvent(self.games[key], match))
+
+    def register_handler(self, handler: EventHandler):
+        self.evmap.register(handler)
+        self.logger.debug(f"registered handler: {type(handler).__name__}")

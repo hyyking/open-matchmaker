@@ -130,7 +130,6 @@ class Team(Table, Insertable, Loadable):
     name: Optional[str] = field(default=None)
     player_one: Optional[Player] = field(default=None)
     player_two: Optional[Player] = field(default=None)
-
     elo: float = field(default=0)
 
     def __str__(self):
