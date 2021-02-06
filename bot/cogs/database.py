@@ -128,6 +128,33 @@ class DatabaseCog(commands.Cog, BotContext):
         await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
+    async def leaderboard(self, ctx):
+        query = ColumnQuery(QueryKind.SELECT, "team_details_with_delta", "*", [])
+
+        def format_team(query):
+            tid, tn, p1id, p1name, p2id, p2name, delta = query
+            elo = ctx.bot.mm.config.base_elo + delta
+            return Team(
+                team_id=tid,
+                name=tn,
+                player_one=Player(discord_id=p1id, name=p1name),
+                player_two=Player(discord_id=p2id, name=p2name),
+                elo=elo
+            )
+
+        q = self.db.execute(query, "FetchLeaderboard")
+        assert q is not None
+        teams = list(map(format_team, q.fetchall()))
+        teams.sort(reverse=True, key=lambda x: x.elo)
+        content = ""
+        for rank, team in enumerate(teams, 1):
+            content += f"{rank}. {team}\n"
+            if rank > 15:
+                break
+        message = f"""```Leaderboard:\n{content}\n```"""
+        await ctx.message.channel.send(content=message, reference=ctx.message)
+
+    @commands.command()
     async def stats(self, ctx, who: Optional[ToRegisteredTeam] = None):
         query = ColumnQuery(
             QueryKind.SELECT,
