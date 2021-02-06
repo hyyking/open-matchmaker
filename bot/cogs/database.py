@@ -1,5 +1,5 @@
 import logging, io
-from typing import Optional, cast
+from typing import Optional, cast, Dict, List
 
 from discord.ext import commands
 from discord import File
@@ -26,6 +26,7 @@ class SmallResult:
     turn_id: int
     team_name: str
     delta: float
+
     def __init__(self, turn_id: int, team_name: str, delta: float):
         self.turn_id = turn_id
         self.team_name = team_name
@@ -33,7 +34,6 @@ class SmallResult:
 
     def as_tuple(self):
         return (self.turn_id, self.delta)
-
 
 
 class DatabaseCog(commands.Cog, BotContext):
@@ -137,26 +137,35 @@ class DatabaseCog(commands.Cog, BotContext):
                 "rt1.team_id",
                 "rt1.team_name",
                 "rt1.delta",
-
                 "rt2.team_id",
                 "rt2.team_name",
                 "rt2.delta",
             ],
             [
                 InnerJoin("turn", on=Eq("turn.round_id", "match.round_id")),
-                InnerJoin(Alias("result_with_team_details", "rt1"), on=Eq("rt1.result_id", "match.result_one")),
-                InnerJoin(Alias("result_with_team_details", "rt2"), on=Eq("rt2.result_id", "match.result_two")),
-            ]
+                InnerJoin(
+                    Alias("result_with_team_details", "rt1"),
+                    on=Eq("rt1.result_id", "match.result_one"),
+                ),
+                InnerJoin(
+                    Alias("result_with_team_details", "rt2"),
+                    on=Eq("rt2.result_id", "match.result_two"),
+                ),
+            ],
         )
 
         if who is not None:
-            query.statement.append(Where(Or(Eq("rt1.team_id", who.team_id), Eq("rt2.team_id", who.team_id))))
+            assert isinstance(query.statement, list)
+            query.statement.append(
+                Where(
+                    Or(Eq("rt1.team_id", who.team_id), Eq("rt2.team_id", who.team_id))
+                )
+            )
 
         q = ctx.bot.db.execute(query, "FetchTeamsWithElo")
         assert q is not None
 
-
-        group = {}
+        group: Dict[int, List[SmallResult]] = {}
         for data in q.fetchall():
             turn_id, t1id, t1n, t1d, t2id, t2n, t2d = data
             team1 = group.get(t1id, [])
@@ -168,17 +177,19 @@ class DatabaseCog(commands.Cog, BotContext):
         axes = figure.add_subplot()
         if who is not None:
             team = group[who.team_id]
-            name =  team[0].team_name if len(team) > 0 else ""
+            name = team[0].team_name if len(team) > 0 else ""
             axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
         else:
             for tid, team in group.items():
-                name =  team[0].team_name if len(team) > 0 else ""
+                name = team[0].team_name if len(team) > 0 else ""
                 axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
 
-        plt.legend(loc="upper left") 
+        plt.legend(loc="upper left")
 
         buf = io.BytesIO()
-        figure.savefig(buf)
+        figure.savefig(buf)  # type: ignore
         buf.seek(0)
-        await ctx.message.channel.send(file=File(buf, filename="stats.png"), reference=ctx.message)
+        await ctx.message.channel.send(
+            file=File(buf, filename="stats.png"), reference=ctx.message
+        )
         plt.close(figure)

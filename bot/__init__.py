@@ -47,7 +47,9 @@ class MatchMakerBot(commands.Bot):
         return f"{self.config.ok_prefix} : {ok}"
 
     async def on_message(self, message):
-        is_command = len(message.content) > 0 and message.content[0] == self.command_prefix
+        is_command = (
+            len(message.content) > 0 and message.content[0] == self.command_prefix
+        )
         if is_command and message.channel.name != self.config.channel:
             await message.delete()
         elif is_command and message.content.startswith("+queue"):

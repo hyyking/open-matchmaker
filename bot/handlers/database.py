@@ -41,11 +41,13 @@ class ResultHandler(EventHandler):
         igctx = ctx.context
         if not self.db.insert(igctx.round, "RoundInsert"):
             return HandlingError("Failed to insert new round", self)
-        
-        query = ColumnQuery(QueryKind.SELECT, "sqlite_sequence", "seq", [Where(Eq("name", "result"))])
+
+        query = ColumnQuery(
+            QueryKind.SELECT, "sqlite_sequence", "seq", [Where(Eq("name", "result"))]
+        )
         q = self.db.execute(query, "ResultCount")
         if q is None:
-            return HandlingError("Failed to get result count")
+            return HandlingError("Failed to get result count", self)
         result = q.fetchone()
         result_id = 0 if result is None else result[0]
 
