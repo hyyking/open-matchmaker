@@ -10,6 +10,7 @@ from matchmaker.event import EventKind
 from .config import BotConfig
 from .cogs import MatchMakerCog, DatabaseCog, AdminCog
 from .handlers import MatchStartHandler, MatchEndHandler, ResultHandler
+from .help import Help
 
 __all__ = ("MatchMakerBot", "Database", "MatchMaker")
 
@@ -21,6 +22,7 @@ class MatchMakerBot(commands.Bot):
     def __init__(self, config: BotConfig, mmcfg: Config, db: Database):
         super().__init__(command_prefix=config.command_prefix)
         self.logger = logging.getLogger(__name__)
+        self.help_command = Help()
 
         self.db = db
         self.config = config

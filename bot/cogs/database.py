@@ -211,13 +211,14 @@ class DatabaseCog(commands.Cog, BotContext):
                 name = team[0].team_name if len(team) > 0 else ""
                 axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
 
-        plt.legend(loc="upper left")
+        plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
         plt.title("Elo variations for all teams" if who is None else f"Elo variation for {who.name}")
         plt.xlabel("Round")
         plt.ylabel("Elo variation")
+        plt.axhline(y=0, color="k")
 
         buf = io.BytesIO()
-        figure.savefig(buf)  # type: ignore
+        figure.savefig(buf, bbox_inches="tight")  # type: ignore
         buf.seek(0)
         await ctx.message.channel.send(
             file=File(buf, filename="stats.png"), reference=ctx.message
