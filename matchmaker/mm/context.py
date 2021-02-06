@@ -247,7 +247,6 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
         self.results.add(r1.team.player_two)
         self.results.add(r2.team.player_one)
         self.results.add(r2.team.player_two)
-
         r1.delta = self.k_factor * (r1.points - match.team_one.points)
         r2.delta = self.k_factor * (r2.points - match.team_two.points)
 

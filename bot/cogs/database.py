@@ -195,8 +195,8 @@ class DatabaseCog(commands.Cog, BotContext):
         group: Dict[int, List[SmallResult]] = {}
         for data in q.fetchall():
             turn_id, t1id, t1n, t1d, t2id, t2n, t2d = data
-            team1 = group.get(t1id, [])
-            team2 = group.get(t2id, [])
+            team1 = group.get(t1id, [SmallResult(0, t1n, 0)])
+            team2 = group.get(t2id, [SmallResult(0, t2n, 0)])
             group[t1id] = team1 + [SmallResult(turn_id, t1n, t1d)]
             group[t2id] = team2 + [SmallResult(turn_id, t2n, t2d)]
 
@@ -212,6 +212,9 @@ class DatabaseCog(commands.Cog, BotContext):
                 axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
 
         plt.legend(loc="upper left")
+        plt.title("Elo variations for all teams" if who is None else f"Elo variation for {who.name}")
+        plt.xlabel("Round")
+        plt.ylabel("Elo variation")
 
         buf = io.BytesIO()
         figure.savefig(buf)  # type: ignore

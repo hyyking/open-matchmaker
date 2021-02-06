@@ -14,3 +14,6 @@ NOTINIT = KeyError("MatchMakerCog is not initialized")
 class BotContext:
     db: Database
     mm: MatchMaker
+
+    def __hash__(self):
+        return hash(type(self).__name__)

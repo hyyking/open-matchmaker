@@ -41,8 +41,12 @@ tests/%.sqlite3: $(SQL) tests/generate.py
 tree:
 	@tree --dirsfirst -I "__pycache__"
 
-lint:
+lint: .pylintrc
 	@mypy --namespace-packages $(MODULES)
+
+
+.pylintrc:
+	@pylint --generate-rcfile > $@
 
 clean:
 	-@rm -r **/__pycache__ 2> /dev/null || true

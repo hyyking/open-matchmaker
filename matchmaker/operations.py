@@ -3,7 +3,7 @@ from typing import Optional
 
 from .template import ColumnQuery, Conditional
 
-__all__ = ("Insertable", "UniqueId", "Loadable")
+__all__ = ("Insertable", "Table", "Loadable")
 
 
 class Table(abc.ABC):

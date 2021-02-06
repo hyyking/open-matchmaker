@@ -45,7 +45,7 @@ class UtilityBasedPrincipal(Principal):
         return round(
             (1 / (1 + 10 ** ((rhs.elo - lhs.elo) / 400)))
             * self.config.points_per_match,
-            2,
+            4,
         )
 
     def period(self):
