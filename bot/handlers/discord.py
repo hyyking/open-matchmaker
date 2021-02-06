@@ -93,10 +93,14 @@ class MatchEndHandler(EventHandler):
 
         igctx = ctx.context
         assert igctx.round.end_time is not None
+        assert igctx.round.start_time is not None
 
-        duration = (igctx.round.end_time - igctx.round.start_time).strftime("%H:%M:%S")
+        duration = (igctx.round.end_time - igctx.round.start_time)
+        H, rem = divmod(duration.seconds, 3600)
+        M, S = divmod(rem, 60)
+
         principal = str(igctx.principal)
-        content = f"Round: {igctx.round.round_id} | Duration: {duration} | Principal: {principal}\n"
+        content = f"Round: {igctx.round.round_id} | Duration: {H}:{M}:{S} | Principal: {principal}\n"
         for match in igctx.matches:
             assert match.team_one is not None
             assert match.team_two is not None
