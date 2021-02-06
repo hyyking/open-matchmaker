@@ -133,7 +133,7 @@ class Team(Table, Insertable, Loadable):
     elo: float = field(default=0)
 
     def __str__(self):
-        return f"{self.name}({self.elo})"
+        return f"{self.name}({int(self.elo)})"
 
     @staticmethod
     def validate(team: Optional["Team"]) -> bool:

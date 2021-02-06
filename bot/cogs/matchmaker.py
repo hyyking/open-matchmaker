@@ -47,7 +47,7 @@ class MatchMakerCog(commands.Cog, BotContext):
         if isinstance(err, Error):
             raise err
 
-        message = ctx.bot.fmtok(f"Successfully queued {team.name}({team.elo})!")
+        message = ctx.bot.fmtok(f"Successfully queued {team}!")
         await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
@@ -111,7 +111,7 @@ class MatchMakerCog(commands.Cog, BotContext):
     async def who(self, ctx):
         mm = ctx.bot.mm
 
-        queue = list(map(lambda t: f"{t.name}({t.elo})", mm.get_queue()))
+        queue = list(map(Team.__str__, mm.get_queue()))
         threshold = mm.config.trigger_threshold
 
         message = f"""```[{len(queue)} / {threshold}]\n{", ".join(queue)}```"""

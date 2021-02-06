@@ -58,9 +58,8 @@ class MatchStartHandler(EventHandler):
             content += f"\n{match.match_id} | {team1} VS {team2} ~ {score}"
 
         message = f"""
-:fire: :fire: :fire: ----- GAME STARTED ----- :fire: :fire: :fire:
-```{content}
-```"""
+:crossed_swords: :crossed_swords: :crossed_swords: - GAME START - :crossed_swords: :crossed_swords: :crossed_swords:
+```{content}\n```"""
         self.eventloop.create_task(self.channel.send(content=message))
         self.logger.debug(f"Round start message sent")
         return None
@@ -95,21 +94,38 @@ class MatchEndHandler(EventHandler):
         igctx = ctx.context
         assert igctx.round.end_time is not None
 
-        end_time = igctx.round.end_time.strftime("%y-%m-%d %H:%M:%S")
+        duration = (igctx.round.end_time - igctx.round.start_time).strftime("%H:%M:%S")
         principal = str(igctx.principal)
-        content = f"Round: {igctx.round.round_id} | End: {end_time} | Principal: {principal}\n"
+        content = f"Round: {igctx.round.round_id} | Duration: {duration} | Principal: {principal}\n"
         for match in igctx.matches:
             assert match.team_one is not None
             assert match.team_two is not None
             assert match.team_one.team is not None
             assert match.team_two.team is not None
             mid = match.match_id
+
+            match.team_one.team.elo += match.team_one.delta
+            match.team_two.team.elo += match.team_two.delta
+
+            if match.team_one.delta < 0:
+                fmtdelta1 = f"[{int(match.team_one.delta)}]"
+            else:
+                fmtdelta1 = f"[+{int(match.team_one.delta)}]"
+
+            if match.team_two.delta < 0:
+                fmtdelta2 = f"[{int(match.team_two.delta)}]"
+            else:
+                fmtdelta2 = f"[+{int(match.team_two.delta)}]"
+
             team1 = str(match.team_one.team)
             team2 = str(match.team_two.team)
             score = f"{match.team_one.points}-{match.team_two.points}"
-            content += f"\n{match.match_id} | {team1} VS {team2} ~ {score}"
+            content += f"\n{match.match_id} | {team1} {fmtdelta1} VS {team2} {fmtdelta2} ~ {score}"
 
-        message = f"""```{content}\n```"""
+        message = f"""
+
+:satellite: :satellite: :satellite: - END OF GAME - :satellite: :satellite: :satellite:
+```{content}\n```"""
         self.eventloop.create_task(self.channel.send(content=message))
         self.logger.debug(f"Round end message sent")
         return None

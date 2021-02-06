@@ -41,10 +41,10 @@ class MatchMakerBot(commands.Bot):
             self.add_cog(cog(self.db, self.mm))
 
     def fmterr(self, err):
-        return f"{self.config.err_prefix} : {err}"
+        return f"{self.config.err_prefix}    `{err}`"
 
     def fmtok(self, ok):
-        return f"{self.config.ok_prefix} : {ok}"
+        return f"{self.config.ok_prefix}    `{ok}`"
 
     async def on_message(self, message):
         is_command = (
