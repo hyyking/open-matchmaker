@@ -4,6 +4,7 @@ from discord import TextChannel
 
 from matchmaker.mm.context import InGameContext
 from matchmaker.tables import Match, Round
+from matchmaker.template import ColumnQuery, QueryKind, Where, Eq
 
 from matchmaker.event import EventHandler, EventKind, EventContext
 from matchmaker.event.eventmap import EventMap
@@ -40,10 +41,20 @@ class ResultHandler(EventHandler):
         igctx = ctx.context
         if not self.db.insert(igctx.round, "RoundInsert"):
             return HandlingError("Failed to insert new round", self)
+        
+        query = ColumnQuery(QueryKind.SELECT, "sqlite_sequence", "seq", [Where(Eq("name", "result"))])
+        q = self.db.execute(query, "ResultCount")
+        if q is None:
+            return HandlingError("Failed to get result count")
+        result = q.fetchone()
+        result_id = 0 if result is None else result[0]
 
         for match in igctx.matches:
             if match.team_one is None or match.team_two is None:
                 return HandlingError("Missing result", self)
+            match.team_one.result_id = result_id + 1
+            match.team_two.result_id = result_id + 2
+            result_id += 2
             if not self.db.insert(match.team_one, "ResultInsert"):
                 return HandlingError("Missing result", self)
             if not self.db.insert(match.team_two, "ResultInsert"):

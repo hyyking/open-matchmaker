@@ -39,6 +39,9 @@ def log(log_file: str, level: str):
     logger = logging.getLogger("asyncio")
     logger.setLevel(logging.WARNING)
 
+    logger = logging.getLogger("matplotlib")
+    logger.setLevel(logging.WARNING)
+
     return logging.getLogger(__name__)
 
 

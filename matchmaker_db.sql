@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS match (
 
     FOREIGN KEY (round_id) REFERENCES turn(round_id),
     FOREIGN KEY (result_one) REFERENCES result(result_id),
-    FOREIGN KEY (result_two) REFERENCES turn(result_id)
+    FOREIGN KEY (result_two) REFERENCES result(result_id)
 
 );
 
