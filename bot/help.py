@@ -17,11 +17,11 @@ class Help(commands.HelpCommand):
     
     user:
         - register: 
-            registers a team
+            registers a team with a player
             example: +register @BabyHaxbud MyNewTeam
 
         - teams:
-            shows all the teams you or the person is part of
+            shows all the teams you or the person are part of
             example: +teams / +teams @BabyHaxbud
 
         - leaderboard:
@@ -29,7 +29,7 @@ class Help(commands.HelpCommand):
             example: +leaderboard
 
         - stats:
-            creates a graph with elo variations
+            creates a graph with elo evolution
             example: +stats / +stats MyNewTeam
 
         - queue:
