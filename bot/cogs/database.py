@@ -1,12 +1,14 @@
-import logging, io
-from typing import Optional, cast, Dict, List
+""" Commands that use the database """
+
+import io
+from typing import Optional, Dict, List
 
 from discord.ext import commands
 from discord import File
 
 import matplotlib.pyplot as plt
 
-from matchmaker.tables import Player, Team, Result
+from matchmaker.tables import Player, Team
 from matchmaker.template import (
     ColumnQuery,
     QueryKind,
@@ -18,11 +20,14 @@ from matchmaker.template import (
     Alias,
 )
 
-from ..ctx import BotContext
 from ..converters import ToPlayer, ToRegisteredTeam
 
+__all__ = ("DatabaseCog",)
 
-class SmallResult:
+
+class SmallResult:  # pylint: disable=too-few-public-methods
+    """ small result class for display """
+
     turn_id: int
     team_name: str
     delta: float
@@ -33,12 +38,16 @@ class SmallResult:
         self.delta = delta
 
     def as_tuple(self):
+        """ returns a tuple of the round and the delta (for graphing) """
         return (self.turn_id, self.delta)
 
 
-class DatabaseCog(commands.Cog, BotContext):
+class DatabaseCog(commands.Cog):
+    """ Database operations commands """
+
     @commands.command()
     async def register(self, ctx, teammate: ToPlayer, *, team_name: str):
+        """ register the caller with his teammate as a new team """
         bot = ctx.bot
 
         current = Player(ctx.message.author.id, ctx.message.author.name)
@@ -47,12 +56,12 @@ class DatabaseCog(commands.Cog, BotContext):
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
-        if not self.db.exists(current, "RegisterUnregisteredPlayer"):
-            assert self.db.insert(current)
-        if not self.db.exists(teammate, "RegisterUnregisteredPlayer"):
-            assert self.db.insert(teammate)
+        if not bot.db.exists(current, "RegisterUnregisteredPlayer"):
+            assert bot.db.insert(current)
+        if not bot.db.exists(teammate, "RegisterUnregisteredPlayer"):
+            assert bot.db.insert(teammate)
 
-        if self.db.exists(Team(name=team_name), "IsDuplicateTeamName"):
+        if bot.db.exists(Team(name=team_name), "IsDuplicateTeamName"):
             message = f"'{team_name}' is already present, use a different name!"
             message = bot.fmterr(message)
             await ctx.message.channel.send(content=message, reference=ctx.message)
@@ -75,11 +84,11 @@ class DatabaseCog(commands.Cog, BotContext):
                 )
             ),
         )
-        q = self.db.execute(query, "PlayerHasTeam")
-        assert q is not None
-        if q.fetchone()[0] == 1:
+        execq = bot.db.execute(query, "PlayerHasTeam")
+        assert execq is not None
+        if execq.fetchone()[0] == 1:
             query.kind = QueryKind.SELECT
-            cursor = self.db.execute(query, "FetchTeamName")
+            cursor = bot.db.execute(query, "FetchTeamName")
             assert cursor is not None
             team_name = cursor.fetchone()[0]
             message = bot.fmterr(
@@ -87,7 +96,7 @@ class DatabaseCog(commands.Cog, BotContext):
             )
             await ctx.message.channel.send(content=message, reference=ctx.message)
         else:
-            assert self.db.insert(
+            assert bot.db.insert(
                 Team(name=team_name, player_one=current, player_two=teammate)
             )
             message = bot.fmtok(
@@ -97,6 +106,7 @@ class DatabaseCog(commands.Cog, BotContext):
 
     @commands.command()
     async def teams(self, ctx, who: Optional[ToPlayer] = None):
+        """ send the list of teams for a player """
         current = Player(ctx.message.author.id, ctx.message.author.name)
 
         if who is not None:
@@ -117,34 +127,35 @@ class DatabaseCog(commands.Cog, BotContext):
         )
 
         def format_team(query):
-            tid, tn, _, p1name, _, p2name, delta = query
+            tid, tname, _, p1name, _, p2name, delta = query
             elo = ctx.bot.mm.config.base_elo + delta
-            return f"{tid} | {tn}({elo}): {p1name} & {p2name}"
+            return f"{tid} | {tname}({elo}): {p1name} & {p2name}"
 
-        q = self.db.execute(query, "FetchTeamsWithElo")
-        assert q is not None
-        content = "\n".join(map(format_team, q.fetchall()))
+        execq = ctx.bot.db.execute(query, "FetchTeamsWithElo")
+        assert execq is not None
+        content = "\n".join(map(format_team, execq.fetchall()))
         message = f"""```{content}\n```"""
         await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
     async def leaderboard(self, ctx):
+        """ send the leaderboard """
         query = ColumnQuery(QueryKind.SELECT, "team_details_with_delta", "*", [])
 
         def format_team(query):
-            tid, tn, p1id, p1name, p2id, p2name, delta = query
+            tid, tname, p1id, p1name, p2id, p2name, delta = query
             elo = ctx.bot.mm.config.base_elo + delta
             return Team(
                 team_id=tid,
-                name=tn,
+                name=tname,
                 player_one=Player(discord_id=p1id, name=p1name),
                 player_two=Player(discord_id=p2id, name=p2name),
                 elo=elo,
             )
 
-        q = self.db.execute(query, "FetchLeaderboard")
-        assert q is not None
-        teams = list(map(format_team, q.fetchall()))
+        execq = ctx.bot.db.execute(query, "FetchLeaderboard")
+        assert execq is not None
+        teams = list(map(format_team, execq.fetchall()))
         teams.sort(reverse=True, key=lambda x: x.elo)
         content = ""
         for rank, team in enumerate(teams, 1):
@@ -155,7 +166,10 @@ class DatabaseCog(commands.Cog, BotContext):
         await ctx.message.channel.send(content=message, reference=ctx.message)
 
     @commands.command()
-    async def stats(self, ctx, who: Optional[ToRegisteredTeam] = None):
+    async def stats(
+        self, ctx, who: Optional[ToRegisteredTeam] = None
+    ):  # pylint: disable=R0914
+        """ send a graph of the elo variations for one or all teams """
         query = ColumnQuery(
             QueryKind.SELECT,
             "match",
@@ -189,11 +203,11 @@ class DatabaseCog(commands.Cog, BotContext):
                 )
             )
 
-        q = ctx.bot.db.execute(query, "FetchTeamsWithElo")
-        assert q is not None
+        execq = ctx.bot.db.execute(query, "FetchTeamsWithElo")
+        assert execq is not None
 
         group: Dict[int, List[SmallResult]] = {}
-        for data in q.fetchall():
+        for data in execq.fetchall():
             turn_id, t1id, t1n, t1d, t2id, t2n, t2d = data
             team1 = group.get(t1id, [SmallResult(0, t1n, 0)])
             team2 = group.get(t2id, [SmallResult(0, t2n, 0)])
@@ -207,7 +221,7 @@ class DatabaseCog(commands.Cog, BotContext):
             name = team[0].team_name if len(team) > 0 else ""
             axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
         else:
-            for tid, team in group.items():
+            for _, team in group.items():
                 name = team[0].team_name if len(team) > 0 else ""
                 axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
 

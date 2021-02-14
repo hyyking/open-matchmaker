@@ -1,10 +1,17 @@
-import os, sys, logging, argparse, json
+""" Entry point of the bot """
+
+import os
+import sys
+import logging
+import argparse
+import json
 from typing import Optional
 
-from bot import MatchMakerBot, Database, config as cfg, cogs
+from bot import MatchMakerBot, Database, config as cfg
 
 
 def parse() -> argparse.ArgumentParser:
+    """ parse command line arguments """
     parser = argparse.ArgumentParser(prog="mm-bot", description="Discord MatchMaker")
     parser.add_argument("--loglevel", default="info", help="Sets log level")
     parser.add_argument("--config", type=str, default=None, help="Sets config file")
@@ -18,14 +25,15 @@ def parse() -> argparse.ArgumentParser:
 
 
 def log(log_file: str, level: str):
-    lm = {
+    """ set log levels """
+    lvl = {
         "debug": logging.DEBUG,
         "info": logging.INFO,
         "warn": logging.WARNING,
         "error": logging.ERROR,
     }
     logging.basicConfig(
-        level=lm.get(level.lower(), logging.INFO),
+        level=lvl.get(level.lower(), logging.INFO),
         format="%(asctime)s; %(levelname)s | %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[
@@ -46,6 +54,7 @@ def log(log_file: str, level: str):
 
 
 def main(dump_config: bool, loglevel: str, database: str, config: Optional[str]):
+    """ run the bot """
     logger = log("matchmaker.log", loglevel)
 
     botcfg, mmcfg = cfg.from_file(config) if config is not None else cfg.default()

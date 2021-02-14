@@ -1,7 +1,11 @@
+""" Bot help command """
+
 from discord.ext import commands
 
 
 class Help(commands.HelpCommand):
+    """ Help Command """
+
     async def send_bot_help(self, mapping):
         if len(mapping) == 0:
             return

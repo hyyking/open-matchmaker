@@ -1,21 +1,22 @@
-import logging, asyncio
+""" Discord bot message senders for game start and end events """
+
+import logging
+import asyncio
 from typing import Optional
 
 from discord import TextChannel
 
-from matchmaker.mm.context import InGameContext, QueueContext
-from matchmaker.mm.games import Games
-from matchmaker.mm.config import Config
-from matchmaker.tables import Match, Round
+from matchmaker.mm.context import InGameContext
 
 from matchmaker.event import EventHandler, EventKind, EventContext
-from matchmaker.event.eventmap import EventMap
 from matchmaker.event.error import HandlingResult, HandlingError
 
 __all__ = ("MatchStartHandler", "MatchEndHandler")
 
 
 class MatchStartHandler(EventHandler):
+    """ Send a discord message with matches when the round starts """
+
     def __init__(self, loop: asyncio.AbstractEventLoop):
         self.logger = logging.getLogger("bot.handlers")
         self.eventloop = loop
@@ -38,7 +39,7 @@ class MatchStartHandler(EventHandler):
     def handle(self, ctx: EventContext) -> HandlingResult:
         if not isinstance(ctx.context, InGameContext):
             return HandlingError("Expected an InGameContext", self)
-        elif self.channel is None:
+        if self.channel is None:
             return HandlingError("Missing channel", self)
 
         igctx = ctx.context
@@ -51,7 +52,6 @@ class MatchStartHandler(EventHandler):
             assert match.team_two is not None
             assert match.team_one.team is not None
             assert match.team_two.team is not None
-            mid = match.match_id
             team1 = str(match.team_one.team)
             team2 = str(match.team_two.team)
             score = f"{match.team_one.points}-{match.team_two.points}"
@@ -61,11 +61,13 @@ class MatchStartHandler(EventHandler):
 :crossed_swords: :crossed_swords: :crossed_swords: - GAME START - :crossed_swords: :crossed_swords: :crossed_swords:
 ```{content}\n```"""
         self.eventloop.create_task(self.channel.send(content=message))
-        self.logger.debug(f"Round start message sent")
+        self.logger.debug("Round start message sent")
         return None
 
 
 class MatchEndHandler(EventHandler):
+    """ Send a discord message with results when the round ends """
+
     def __init__(self, loop: asyncio.AbstractEventLoop):
         self.logger = logging.getLogger("bot.handlers")
         self.eventloop = loop
@@ -88,25 +90,24 @@ class MatchEndHandler(EventHandler):
     def handle(self, ctx: EventContext) -> HandlingResult:
         if not isinstance(ctx.context, InGameContext):
             return HandlingError("Expected an InGameContext", self)
-        elif self.channel is None:
+        if self.channel is None:
             return HandlingError("Missing channel", self)
 
-        igctx = ctx.context
-        assert igctx.round.end_time is not None
-        assert igctx.round.start_time is not None
+        assert ctx.context.round.end_time is not None
+        assert ctx.context.round.start_time is not None
 
-        duration = igctx.round.end_time - igctx.round.start_time
-        H, rem = divmod(duration.seconds, 3600)
-        M, S = divmod(rem, 60)
+        duration = ctx.context.round.end_time - ctx.context.round.start_time
+        hours, rem = divmod(duration.seconds, 3600)
+        minutes, seconds = divmod(rem, 60)
 
-        principal = str(igctx.principal)
-        content = f"Round: {igctx.round.round_id} | Duration: {H}:{M}:{S} | Principal: {principal}\n"
-        for match in igctx.matches:
+        principal = str(ctx.context.principal)
+        content = f"Round: {ctx.context.round.round_id} | \
+Duration: {hours}:{minutes}:{seconds} | Principal: {principal}\n"
+        for match in ctx.context.matches:
             assert match.team_one is not None
             assert match.team_two is not None
             assert match.team_one.team is not None
             assert match.team_two.team is not None
-            mid = match.match_id
 
             match.team_one.team.elo += match.team_one.delta
             match.team_two.team.elo += match.team_two.delta
@@ -121,15 +122,13 @@ class MatchEndHandler(EventHandler):
             else:
                 fmtdelta2 = f"[+{int(match.team_two.delta)}]"
 
-            team1 = str(match.team_one.team)
-            team2 = str(match.team_two.team)
             score = f"{match.team_one.points}-{match.team_two.points}"
-            content += f"\n{match.match_id} | {team1} {fmtdelta1} VS {team2} {fmtdelta2} ~ {score}"
+            content += f"\n{match.match_id} | \
+{match.team_one.team} {fmtdelta1} VS {match.team_two.team} {fmtdelta2} ~ {score}"
 
         message = f"""
-
 :satellite: :satellite: :satellite: - END OF GAME - :satellite: :satellite: :satellite:
 ```{content}\n```"""
         self.eventloop.create_task(self.channel.send(content=message))
-        self.logger.debug(f"Round end message sent")
+        self.logger.debug("Round end message sent")
         return None

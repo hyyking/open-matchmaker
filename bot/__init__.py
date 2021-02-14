@@ -1,3 +1,7 @@
+""" Open source elo-based matchmaking system for teams of two players.
+    This is the discord bot implementation.
+"""
+
 import logging
 from typing import List
 
@@ -19,6 +23,8 @@ COGS = [AdminCog, DatabaseCog, MatchMakerCog]
 
 
 class MatchMakerBot(commands.Bot):
+    """ Discord bot implementation of the matchmaker """
+
     def __init__(self, config: BotConfig, mmcfg: Config, db: Database):
         super().__init__(command_prefix=config.command_prefix)
         self.logger = logging.getLogger(__name__)
@@ -28,34 +34,39 @@ class MatchMakerBot(commands.Bot):
         self.config = config
 
         query = ColumnQuery(QueryKind.SELECT, "turn", Max("round_id"), [])
-        q = self.db.execute(query, "QueryInitialRound")
-        assert q is not None
+        execq = self.db.execute(query, "QueryInitialRound")
+        assert execq is not None
 
-        round_id = q.fetchone()[0]
+        round_id = execq.fetchone()[0]
         round_id = 0 if round_id is None else round_id
 
         self.mm = MatchMaker(mmcfg, Round(round_id=round_id + 1))
-        self.register_handlers()
+        self.__register_handlers()
 
         for cog in COGS:
-            self.add_cog(cog(self.db, self.mm))
+            self.add_cog(cog())
 
-    def fmterr(self, err):
-        return f"{self.config.err_prefix}    `{err}`"
+    def fmterr(self, errmsg: str):
+        """ format an error message """
+        return f"{self.config.err_prefix}    `{errmsg}`"
 
-    def fmtok(self, ok):
-        return f"{self.config.ok_prefix}    `{ok}`"
+    def fmtok(self, okmsg: str):
+        """ format a successfull message """
+        return f"{self.config.ok_prefix}    `{okmsg}`"
 
     def reset(self):
+        """ reset matchmaker """
         self.mm.reset()
-        self.register_handlers()
+        self.__register_handlers()
 
-    def register_handlers(self):
+    def __register_handlers(self):
+        """ register bot handlers """
         self.mm.register_handler(MatchStartHandler(self.loop))
         self.mm.register_handler(MatchEndHandler(self.loop))
         self.mm.register_handler(ResultHandler(self.db))
 
     async def on_message(self, message):
+        """ on message handler """
         is_command = (
             len(message.content) > 0 and message.content[0] == self.command_prefix
         )
@@ -85,7 +96,8 @@ class MatchMakerBot(commands.Bot):
         await super().on_message(message)
 
     async def on_ready(self):
-        self.logger.info(f"MatchMakerBot launched!")
+        """ on ready handler """
+        self.logger.info("MatchMakerBot launched!")
         info = await self.application_info()
         print(
             f"""|| AppInfo
@@ -98,17 +110,22 @@ class MatchMakerBot(commands.Bot):
         )
 
     async def on_command_completion(self, ctx):
+        """ on command completion handler """
         command_name = ctx.command.qualified_name
         split = command_name.split(" ")
         command = str(split[0])
-        self.logger.debug(f"{ctx.message.author}: {self.command_prefix}{command}")
+        self.logger.debug("%s: %s %s", ctx.message.author, self.command_prefix, command)
 
-    async def on_command_error(self, ctx, err):
-        if isinstance(err, commands.errors.MissingRequiredArgument):
-            message = self.fmterr(err)
-            await ctx.message.channel.send(content=message, reference=ctx.message)
-        elif isinstance(err, commands.errors.BadArgument):
-            message = self.fmterr(err)
-            await ctx.message.channel.send(content=message, reference=ctx.message)
+    async def on_command_error(self, context, exception):
+        if isinstance(exception, commands.errors.MissingRequiredArgument):
+            message = self.fmterr(exception)
+            await context.message.channel.send(
+                content=message, reference=context.message
+            )
+        elif isinstance(exception, commands.errors.BadArgument):
+            message = self.fmterr(exception)
+            await context.message.channel.send(
+                content=message, reference=context.message
+            )
 
-        self.logger.error(err)
+        self.logger.error(exception)

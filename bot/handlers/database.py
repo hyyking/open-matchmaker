@@ -1,13 +1,11 @@
-import logging, asyncio
+""" Discord bot database inserter for round end events """
 
-from discord import TextChannel
+import logging
 
 from matchmaker.mm.context import InGameContext
-from matchmaker.tables import Match, Round
 from matchmaker.template import ColumnQuery, QueryKind, Where, Eq
 
 from matchmaker.event import EventHandler, EventKind, EventContext
-from matchmaker.event.eventmap import EventMap
 from matchmaker.event.error import HandlingResult, HandlingError
 
 from matchmaker import Database
@@ -16,6 +14,8 @@ __all__ = ("ResultHandler",)
 
 
 class ResultHandler(EventHandler):
+    """ insert round, result and match on round end event """
+
     def __init__(self, db: Database):
         self.logger = logging.getLogger("bot.handlers")
         self.db = db
@@ -34,7 +34,7 @@ class ResultHandler(EventHandler):
     def requeue(self) -> bool:
         return True
 
-    def handle(self, ctx: EventContext) -> HandlingResult:
+    def handle(self, ctx: EventContext) -> HandlingResult:  # pylint: disable=R0911
         if not isinstance(ctx.context, InGameContext):
             return HandlingError("Expected an InGameContext", self)
 
@@ -45,10 +45,10 @@ class ResultHandler(EventHandler):
         query = ColumnQuery(
             QueryKind.SELECT, "sqlite_sequence", "seq", [Where(Eq("name", "result"))]
         )
-        q = self.db.execute(query, "ResultCount")
-        if q is None:
+        execq = self.db.execute(query, "ResultCount")
+        if execq is None:
             return HandlingError("Failed to get result count", self)
-        result = q.fetchone()
+        result = execq.fetchone()
         result_id = 0 if result is None else result[0]
 
         for match in igctx.matches:
@@ -58,9 +58,9 @@ class ResultHandler(EventHandler):
             match.team_two.result_id = result_id + 2
             result_id += 2
             if not self.db.insert(match.team_one, "ResultInsert"):
-                return HandlingError("Missing result", self)
+                return HandlingError("Failed result insert for team1", self)
             if not self.db.insert(match.team_two, "ResultInsert"):
-                return HandlingError("Missing result", self)
+                return HandlingError("Failed result insert for team2", self)
             if not self.db.insert(match, "MatchInsert"):
-                return HandlingError("Missing result", self)
+                return HandlingError("Failed match insert", self)
         return None

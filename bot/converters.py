@@ -1,34 +1,38 @@
+""" Context aware matchmaker converters """
+
 from typing import Optional, cast
 
-from discord.ext.commands import MemberConverter, Converter, CommandError, BadArgument
+from discord.ext.commands import MemberConverter, Converter, BadArgument
 
 from matchmaker.tables import Player, Team, Match, Result
-from matchmaker.mm.principal import get_principal
-from matchmaker.mm.config import Config
 
 
-__all__ = ("ToPlayer", "ToRegisteredTeam", "ToMatchResult", "ToPrincipal")
+__all__ = ("ToPlayer", "ToRegisteredTeam", "ToMatchResult")
 
 
-class ToPlayer(MemberConverter, Player):
+class ToPlayer(MemberConverter, Player):  # pylint: disable=too-many-ancestors
+    """ produce a player instance from discord arguments """
+
     async def convert(self, ctx, argument):
         member = await super().convert(ctx, argument)
         return Player(member.id, member.name)
 
 
 class ToRegisteredTeam(Converter, Team):
-    async def convert(self, ctx, team_name) -> Team:
+    """ load a team that has to be registered """
+
+    async def convert(self, ctx, argument) -> Team:
         db = ctx.bot.db
         base_elo = ctx.bot.mm.config.base_elo
 
-        if not db.exists(Team(name=team_name), "IsRegisteredTeamExists"):
+        if not db.exists(Team(name=argument), "IsRegisteredTeamExists"):
             raise BadArgument(
-                f"'{team_name}' does not exist, check spelling or register it!"
+                f"'{argument}' does not exist, check spelling or register it!"
             )
 
         team = cast(
             Optional[Team],
-            db.load(Team(name=team_name, elo=base_elo)),
+            db.load(Team(name=argument, elo=base_elo)),
         )
         assert team is not None
         assert team.name is not None
@@ -40,6 +44,8 @@ class ToRegisteredTeam(Converter, Team):
 
 
 class ToMatchResult(Converter, Match):
+    """ take (int-int) and produce a formatted result """
+
     async def convert(self, ctx, argument):
         if "-" not in argument:
             raise BadArgument("Invalid result format, please use 'Score1-Score2'")
@@ -51,12 +57,14 @@ class ToMatchResult(Converter, Match):
         try:
             score1 = int(result[0])
             score2 = int(result[1])
-        except:
-            raise BadArgument("Invalid score format, scores should be integers")
+        except ValueError as err:
+            raise BadArgument(
+                "Invalid score format, scores should be integers"
+            ) from err
 
         ppm = ctx.bot.mm.config.points_per_match
         print(ppm)
-        if not (score1 == ppm or score2 == ppm) or (score1 + score2) >= (2 * ppm):
+        if not ppm in (score1, score2) or (score1 + score2) >= (2 * ppm):
             raise BadArgument(f"There should be a single winner with {ppm} points")
 
         result1 = Result(result_id=1, points=score1)

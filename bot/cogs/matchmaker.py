@@ -1,30 +1,22 @@
-import logging
-from typing import Optional, cast
+""" User matchmaker commands """
 
 from discord.ext import commands
 
 from matchmaker.error import Error
 from matchmaker.mm import error
+from matchmaker.tables import Player, Team
 
-from matchmaker.tables import Player, Team, Result
-from matchmaker.template import (
-    ColumnQuery,
-    QueryKind,
-    Eq,
-    And,
-    Or,
-    Where,
-    InnerJoin,
-    Alias,
-)
-
-from ..ctx import BotContext
 from ..converters import ToRegisteredTeam, ToMatchResult
 
+__all__ = ("MatchMakerCog",)
 
-class MatchMakerCog(commands.Cog, BotContext):
+
+class MatchMakerCog(commands.Cog):
+    """ Commands that interact with the matchmaker """
+
     @commands.command()
     async def queue(self, ctx, *, team: ToRegisteredTeam):
+        """ queue a team with its qualified name """
         mm = ctx.bot.mm
 
         current = Player(ctx.message.author.id, ctx.message.author.name)
@@ -52,11 +44,12 @@ class MatchMakerCog(commands.Cog, BotContext):
 
     @commands.command()
     async def dequeue(self, ctx):
+        """ dequeue a queued team """
         current = Player(ctx.message.author.id, ctx.message.author.name)
         mm = ctx.bot.mm
 
         if not mm.has_queued_player(current):
-            message = ctx.bot.fmterr(f"You don't have a queued team!")
+            message = ctx.bot.fmterr("You don't have a queued team!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
 
@@ -72,12 +65,13 @@ class MatchMakerCog(commands.Cog, BotContext):
 
     @commands.command()
     async def result(self, ctx, result: ToMatchResult):
+        """ insert a result for a match """
         current = Player(ctx.message.author.id, ctx.message.author.name)
         mm = ctx.bot.mm
 
         match = mm.get_match_of_player(current)
         if match is None:
-            message = ctx.bot.fmterr(f"You're not in a game!")
+            message = ctx.bot.fmterr("You're not in a game!")
             await ctx.message.channel.send(content=message, reference=ctx.message)
             return
         result.match_id = match.match_id
@@ -109,6 +103,7 @@ class MatchMakerCog(commands.Cog, BotContext):
 
     @commands.command()
     async def who(self, ctx):
+        """ send the formatted queue """
         mm = ctx.bot.mm
 
         queue = list(map(Team.__str__, mm.get_queue()))

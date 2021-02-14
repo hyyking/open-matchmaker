@@ -1,4 +1,7 @@
-import json, logging
+""" Bot config file """
+
+import json
+import logging
 from typing import Tuple
 from dataclasses import dataclass, field
 
@@ -9,6 +12,8 @@ __all__ = ("BotConfig", "MatchMakerConfig", "from_file", "default")
 
 @dataclass
 class BotConfig:
+    """ Bot config class """
+
     command_prefix: str = field(default="+")
     channel: str = field(default="haxball")
     ok_prefix: str = field(default=":smile:")
@@ -16,10 +21,12 @@ class BotConfig:
 
 
 def default() -> Tuple[BotConfig, MatchMakerConfig]:
+    """ return default bot and matchmaker config """
     return (BotConfig(), MatchMakerConfig())
 
 
 def from_file(path: str) -> Tuple[BotConfig, MatchMakerConfig]:
+    """ load bot and matchmaker config from file """
     with open(path, "r") as config:
         cfg = json.loads(config.read())
 
@@ -30,5 +37,5 @@ def from_file(path: str) -> Tuple[BotConfig, MatchMakerConfig]:
         botcfg.__dict__.update(cfg["bot"])
 
     logger = logging.getLogger(__name__)
-    logger.info(f"Loaded config from '{path}'")
+    logger.info("Loaded config from '%s'", path)
     return (botcfg, mmcfg)
