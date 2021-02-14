@@ -1,5 +1,6 @@
+""" Context for the wait queue and ongoing sets """
+
 from typing import Set, List, Optional
-import logging
 from enum import Enum
 
 from .error import (
@@ -12,25 +13,27 @@ from .error import (
 )
 from .principal import Principal
 
-from ..tables import Player, Team, Match, Result, Round, Index
+from ..tables import Player, Team, Match, Round, Index
 from ..error import Failable
 
 __all__ = ("QueueContext", "InGameContext", "InGameState")
 
 
 class QueueContext:
+    """ Stores the context of the wait queue """
+
     round: Round
     players: Set[Player]
     queue: List[Team]
     history: List[Match]
+    history_size: int
 
-    def __init__(self, round: Round, history_size: int = 0):
-        self.round = round
+    def __init__(self, rnd: Round, history_size: int = 0):
+        self.round = rnd
         self.players = set()
         self.queue = []
-
-        self.history_size = history_size
         self.history = []
+        self.history_size = history_size
 
     def __len__(self) -> int:
         return len(self.queue)
@@ -38,17 +41,17 @@ class QueueContext:
     def __getitem__(self, index: Index) -> Optional[Team]:
         if isinstance(index, int):
             return self.queue[index]
-        elif isinstance(index, Player) and Player.validate(index):
+
+        if isinstance(index, Player) and Player.validate(index):
             return self.get_team_player(index)
-        elif isinstance(index, Team) and Team.validate(index):
+
+        if isinstance(index, Team) and Team.validate(index):
             assert index.player_one is not None and index.player_two is not None
             p1 = self.get_team_player(index.player_one)
             p2 = self.get_team_player(index.player_two)
-            if p1 != p2:
-                return None
-            else:
-                return p1
-        elif isinstance(index, Match) and Match.validate(index):
+            return p1 if p1 == p2 else None
+
+        if isinstance(index, Match) and Match.validate(index):
             assert index.team_one is not None
             assert index.team_two is not None
             assert index.team_one.team is not None
@@ -60,20 +63,24 @@ class QueueContext:
             if t2 is not None:
                 return t2
             return None
-        else:
-            raise KeyError("Invalid index, use a team, player, match or and index")
+
+        raise KeyError("Invalid index, use a team, player, match or and index")
 
     def clear(self):
+        """ clear the queue """
         self.players.clear()
         self.queue.clear()
 
     def clear_history(self):
+        """ clear the history """
         self.history.clear()
 
     def is_empty(self) -> bool:
+        """ check if the queue is empty """
         return len(self.players) == 0 and len(self.queue) == 0
 
     def get_team_player(self, player: Player) -> Optional[Team]:
+        """ get the queued team for the player """
         if player not in self.players:
             return None
 
@@ -83,6 +90,9 @@ class QueueContext:
         return None
 
     def queue_team(self, team: Team) -> Failable:
+        """queue a team, both players are not allowed to queue in a different team
+        at the same time
+        """
         if not Team.validate(team):
             return MissingFieldsError("Missing player fields when queuing team", team)
 
@@ -106,9 +116,11 @@ class QueueContext:
         return None
 
     def dequeue_team(self, team: Team) -> Failable:
+        """ dequeue a team if it is queued """
         if not Team.validate(team):
             return MissingFieldsError("Missing player fields when dequeuing team", team)
-        elif self[team] is None:
+
+        if self[team] is None:
             return NotQueuedError("Team is not queued", team)
 
         assert team.player_one is not None
@@ -120,6 +132,7 @@ class QueueContext:
         return None
 
     def push_history(self, match: Match) -> Failable:
+        """ push a match to the history, fails if match is invalid """
         if not Match.validate(match):
             return MissingFieldsError(
                 "Missing match fields when adding to history", match
@@ -135,11 +148,15 @@ class QueueContext:
 
 
 class InGameState(Enum):
+    """ State of an ongoing Set """
+
     INGAME = 0
     ENDED = 1
 
 
 class InGameContext:
+    """ Stores the context of an ongoing Set """
+
     results: Set[Player]
     matches: List[Match]
     principal: Principal
@@ -160,15 +177,14 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
     def __getitem__(self, index: Index) -> Optional[Match]:
         if isinstance(index, Player) and Player.validate(index):
             return self.get_match_player(index)
-        elif isinstance(index, Team) and Team.validate(index):
+
+        if isinstance(index, Team) and Team.validate(index):
             assert index.player_one is not None and index.player_two is not None
             p1 = self.get_match_player(index.player_one)
             p2 = self.get_match_player(index.player_two)
-            if p1 != p2:
-                return None
-            else:
-                return p1
-        elif isinstance(index, Match) and Match.validate(index):
+            return p1 if p1 == p2 else None
+
+        if isinstance(index, Match) and Match.validate(index):
             assert index.team_one is not None
             assert index.team_two is not None
             assert index.team_one.team is not None
@@ -180,23 +196,28 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
             if t2 is not None:
                 return t2
             return None
-        elif isinstance(index, int):
+
+        if isinstance(index, int):
             return self.matches[index]
-        else:
-            raise KeyError("InGameContext has received a bad index")
+
+        raise KeyError("InGameContext has received a bad index")
 
     @property
     def round(self) -> Round:
+        """ get the current round """
         return self.principal.round
 
     @property
     def k_factor(self) -> float:
+        """ get the elo k-factor """
         return self.principal.config.k_factor
 
     def is_complete(self) -> bool:
+        """ check if the game ended """
         return self.state is InGameState.ENDED
 
     def get_match_player(self, player: Player) -> Optional[Match]:
+        """ get the match the player is currently in """
         for match in self.matches:
             assert match.team_one is not None
             assert match.team_two is not None
@@ -210,9 +231,11 @@ round_id={self.round.round_id}, principal={type(self.principal).__name__})"
         return None
 
     def add_result(self, result: Match) -> Failable:
+        """ add a result for the games, fails if game ended or result was already reported """
+
         if self.state is InGameState.ENDED:
             return GameEndedError("Game has already ended", result)
-        elif not Match.validate(result):
+        if not Match.validate(result):
             return MissingFieldsError("Match is invalid, check for None fields", result)
 
         r1 = result.team_one

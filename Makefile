@@ -42,7 +42,8 @@ tree:
 	@tree --dirsfirst -I "__pycache__"
 
 lint: .pylintrc
-	@mypy --namespace-packages $(MODULES)
+	@mypy --namespace-packages $(MODULES) && \
+	    pylint $(MODULES)
 
 
 .pylintrc:

@@ -1,3 +1,5 @@
+""" MatchMaker implementation """
+
 from .matchmaker import MatchMaker
 from .config import Config
 

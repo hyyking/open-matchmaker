@@ -1,3 +1,5 @@
+""" Defines Principal base class and several principal agent implementations """
+
 import abc
 import logging
 import itertools as it
@@ -9,7 +11,11 @@ from .config import Config
 from ..tables import Match, Round, Team, Result
 
 
-def filter_matches(matches: Tuple[Match, ...]) -> bool:
+__all__ = ("get_principal", "Principal")
+
+
+def filter_set(matches: Tuple[Match, ...]) -> bool:
+    """ filters uncoherent sets (a team plays more than once) """
     teams = set()
     for match in matches:
         assert match.team_one is not None
@@ -27,9 +33,11 @@ def filter_matches(matches: Tuple[Match, ...]) -> bool:
 
 
 class Principal(abc.ABC):
-    def __init__(self, round: Round, config: Config):
+    """ Class that maps teams and match history to a list of new matches """
+
+    def __init__(self, rnd: Round, config: Config):
         self.config = config
-        self.round = round
+        self.round = rnd
 
     def __str__(self):
         return type(self).__name__
@@ -40,6 +48,8 @@ class Principal(abc.ABC):
 
 
 class UtilityBasedPrincipal(Principal):
+    """ Principal that computes a utility score for matches """
+
     def expected_score(self, lhs: Team, rhs: Team) -> float:
         """ compute expected score according to the elo formula """
         return round(
@@ -49,14 +59,14 @@ class UtilityBasedPrincipal(Principal):
         )
 
     def period(self):
-        """ compute periodic factor for the turn: {0, 1} """
-        turn = self.round.round_id * 100
-        d = self.config.period["duty_cycle"] / 5
-        t = self.config.period["active"]
-        return max((-1) ** int((turn % t) / t >= d), 0)
+        """ compute periodic factor for the turn -> {0, 1} """
+        turn = self.round.round_id
+        duty_cycle = self.config.period["duty_cycle"] / 5
+        active = self.config.period["active"]
+        return max((-1) ** int((turn % active) / active >= duty_cycle), 0)
 
     def match_utility(self, match: Match) -> float:
-        """ compute principal's utility of the match """
+        """ compute the utility of a match """
         assert match.team_one is not None
         assert match.team_two is not None
         assert match.team_one.team is not None
@@ -76,6 +86,7 @@ class UtilityBasedPrincipal(Principal):
     def possible_sets(
         self, history: List[Match], teams: List[Team]
     ) -> Iterator[Tuple[Match, ...]]:
+        """ get all possible sets """
         p_matches = {
             Match(
                 match_id=i,
@@ -86,66 +97,78 @@ class UtilityBasedPrincipal(Principal):
             for i, t in enumerate(it.combinations(teams, 2), 1)
         }
         p_matches.difference_update(set(history))
-        return filter(filter_matches, it.combinations(p_matches, len(teams) // 2))
-
-
-__all__ = ("get_principal", "MaxSum", "MinVariance", "MaxMin", "MinMax")
+        return filter(filter_set, it.combinations(p_matches, len(teams) // 2))
 
 
 class MaxSum(UtilityBasedPrincipal):
+    """ MaxSum principal, gets theoretical best set (which could have a big variance) """
+
     def utility(self, matches: Tuple[Match, ...]):
-        return sum(map(lambda x: self.match_utility(x), matches))
+        """ compute sum of utilities """
+        return sum(map(self.match_utility, matches))
 
     def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
-        pick = max(p_sets, key=lambda matches: self.utility(matches))
+        pick = max(p_sets, key=self.utility)
         return list(pick)
 
 
 class MinVariance(UtilityBasedPrincipal):
+    """ MinVariance principal, tries to center the utility of matches """
+
     def variance(self, matches: Tuple[Match, ...]):
-        utilities = map(lambda x: self.match_utility(x), matches)
+        """ compute variance of utilities """
+        utilities = map(self.match_utility, matches)
         mean = sum(utilities) / len(matches)
         return sum((u - mean) ** 2 for u in utilities) / len(matches)
 
     def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
-        pick = min(p_sets, key=lambda matches: self.variance(matches))
+        pick = min(p_sets, key=self.variance)
         return list(pick)
 
 
 class MaxMin(UtilityBasedPrincipal):
+    """ MinMax principal, good for making the worst team play good matches """
+
     def utility(self, matches: Tuple[Match, ...]):
-        return min(map(lambda x: self.match_utility(x), matches))
+        """ compute min utility """
+        return min(map(self.match_utility, matches))
 
     def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
-        pick = max(p_sets, key=lambda matches: self.utility(matches))
+        pick = max(p_sets, key=self.utility)
         return list(pick)
 
 
 class MinMax(UtilityBasedPrincipal):
+    """ MaxMin principal, good for making the better teams play diverse matches """
+
     def utility(self, matches: Tuple[Match, ...]):
-        return max(map(lambda x: self.match_utility(x), matches))
+        """ compute max utility """
+        return max(map(self.match_utility, matches))
 
     def __call__(self, teams: List[Team], history: List[Match]) -> List[Match]:
         p_sets = self.possible_sets(history, teams)
-        pick = min(p_sets, key=lambda matches: self.utility(matches))
+        pick = min(p_sets, key=self.utility)
         return list(pick)
 
 
-def get_principal(round: Round, config: Config) -> Principal:
+def get_principal(rnd: Round, config: Config) -> Principal:
+    """ Get a principal agent for the round """
+
     principals = {
-        "max_sum": lambda: MaxSum(round, config),
-        "min_variance": lambda: MinVariance(round, config),
-        "maxmin": lambda: MaxMin(round, config),
-        "minmax": lambda: MinMax(round, config),
+        "max_sum": MaxSum(rnd, config),
+        "min_variance": MinVariance(rnd, config),
+        "maxmin": MaxMin(rnd, config),
+        "minmax": MinMax(rnd, config),
     }
     principal = principals.get(config.principal)
     if principal is None:
         logger = logging.getLogger(__name__)
-        logger.warn(f"Principal '{config.principal}' not found using 'max_sum' instead")
-        logger.info(f"use one of {list(principals.keys())}")
-        return principals["max_sum"]()
-    else:
-        return principal()
+        logger.warning(
+            "Principal '%s' not found using 'max_sum' instead", config.principal
+        )
+        logger.info("use one of %s", list(principals.keys()))
+        principal = principals["max_sum"]
+    return principal

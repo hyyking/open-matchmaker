@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from dataclasses import dataclass, field
-from typing import Optional, List, Union
+from typing import Optional, Union
 
 from .operations import Table, Insertable, Loadable
 from .template import (
@@ -26,6 +26,8 @@ __all__ = ("Player", "Team", "Round", "Match", "Result", "Index")
 
 @dataclass(eq=False)
 class Player(Table, Insertable, Loadable):
+    """ Representation of the player table """
+
     discord_id: int = field(default=0)
     name: Optional[str] = field(default=None)
 
@@ -36,15 +38,15 @@ class Player(Table, Insertable, Loadable):
     def match_conditions(self) -> Optional[Conditional]:
         cond = None
         if self.discord_id != 0:
-            eq = Eq("discord_id", self.discord_id)
-            cond = eq if cond is None else And(eq, cond)  # type: ignore
+            cond = Eq("discord_id", self.discord_id)
         if self.name is not None:
-            eq = Eq("name", self.name)
-            cond = eq if cond is None else And(eq, cond)  # type: ignore
+            nexteq = Eq("name", self.name)
+            cond = nexteq if cond is None else And(nexteq, cond)  # type: ignore
         return cond
 
     @staticmethod
     def validate(player: Optional["Player"]) -> bool:
+        """ validate the fields of this instance """
         if player is None:
             return False
         return player.discord_id != 0
@@ -75,6 +77,8 @@ class Player(Table, Insertable, Loadable):
 
 @dataclass(eq=False)
 class Round(Table, Insertable, Loadable):
+    """ Representation of the turn table """
+
     round_id: int = field(default=0)
     start_time: Optional[datetime] = field(default=None)
     end_time: Optional[datetime] = field(default=None)
@@ -85,10 +89,11 @@ class Round(Table, Insertable, Loadable):
         return "turn"
 
     @staticmethod
-    def validate(round: Optional["Round"]) -> bool:
-        if round is None:
+    def validate(rnd: Optional["Round"]) -> bool:
+        """ validate the fields of this instance """
+        if rnd is None:
             return False
-        return round.round_id != 0
+        return rnd.round_id != 0
 
     def match_conditions(self) -> Optional[Conditional]:
         if self.round_id == 0:
@@ -126,6 +131,8 @@ class Round(Table, Insertable, Loadable):
 
 @dataclass(eq=False)
 class Team(Table, Insertable, Loadable):
+    """ Representation of the team table """
+
     team_id: int = field(default=0)
     name: Optional[str] = field(default=None)
     player_one: Optional[Player] = field(default=None)
@@ -137,6 +144,7 @@ class Team(Table, Insertable, Loadable):
 
     @staticmethod
     def validate(team: Optional["Team"]) -> bool:
+        """ validate the fields of this instance """
         if team is None:
             return False
         return (
@@ -152,11 +160,10 @@ class Team(Table, Insertable, Loadable):
     def match_conditions(self) -> Optional[Conditional]:
         cond = None
         if self.team_id != 0:
-            eq = Eq("team_id", self.team_id)
-            cond = eq if cond is None else And(eq, cond)  # type: ignore
+            cond = Eq("team_id", self.team_id)
         if self.name is not None:
-            eq = Eq("team_name", self.name)
-            cond = eq if cond is None else And(eq, cond)  # type: ignore
+            nexteq = Eq("team_name", self.name)
+            cond = nexteq if cond is None else And(nexteq, cond)  # type: ignore
         if self.player_one is not None and self.player_two is not None:
             cond1 = self.player_one.match_conditions()
             cond2 = self.player_two.match_conditions()
@@ -197,15 +204,19 @@ class Team(Table, Insertable, Loadable):
         )
 
     def absorb_result(self, result: "Result"):
+        """ absorb a result """
         assert result.delta is not None
         self.elo += result.delta
 
     def has_player(self, player: Player) -> bool:
-        return self.player_one == player or self.player_two == player
+        """ check if the team has this player """
+        return player in (self.player_one, self.player_two)
 
 
 @dataclass(eq=False)
 class Result(Table, Insertable, Loadable):
+    """ Representation of the result table """
+
     result_id: int = field(default=0)
     team: Optional[Team] = field(default=None)
     points: float = field(default=0.0)
@@ -213,6 +224,7 @@ class Result(Table, Insertable, Loadable):
 
     @staticmethod
     def validate(result: Optional["Result"]) -> bool:
+        """ validate the fields of this instance """
         if result is None:
             return False
         return result.result_id != 0 and Team.validate(result.team)
@@ -253,10 +265,11 @@ class Result(Table, Insertable, Loadable):
 
     @staticmethod
     def elo_for_team(team: Team) -> ColumnQuery:
+        """ get the delta sum for this team """
         return ColumnQuery(
             QueryKind.SELECT,
             "result",
-            [Sum(f"delta")],
+            Sum("delta"),
             Where(Eq("team_id", team.team_id)),
         )
 
@@ -269,8 +282,26 @@ class Result(Table, Insertable, Loadable):
         )
 
 
+def __to_result(result: list) -> Result:
+    tid, tname, p1id, p1name, p2id, p2name = result[0:6]
+    rid, rpoints, rdelta = result[6:9]
+    return Result(
+        result_id=rid,
+        points=rpoints,
+        delta=rdelta,
+        team=Team(
+            team_id=tid,
+            name=tname,
+            player_one=Player(discord_id=p1id, name=p1name),
+            player_two=Player(discord_id=p2id, name=p2name),
+        ),
+    )
+
+
 @dataclass(eq=False)
 class Match(Table, Insertable, Loadable):
+    """ Representation of the match table """
+
     match_id: int = field(default=0)
     round: Optional[Round] = field(default=None)
     team_one: Optional[Result] = field(default=None)
@@ -284,6 +315,7 @@ class Match(Table, Insertable, Loadable):
 
     @staticmethod
     def validate(match: Optional["Match"]) -> bool:
+        """ validate the fields of this instance """
         if match is None:
             return False
         return (
@@ -293,6 +325,7 @@ class Match(Table, Insertable, Loadable):
         )
 
     def has_result(self, result: Result) -> int:
+        """ check if the result is associated with this match """
         if result.team is None:
             return 0
         return self.has_team(result.team)
@@ -301,32 +334,26 @@ class Match(Table, Insertable, Loadable):
         """ 0 if not, 1 if result of team 1, 2 if result of team 2 """
         if self.team_one is None or self.team_one.team is None:
             return 0
-        elif self.team_two is None or self.team_two.team is None:
+        if self.team_two is None or self.team_two.team is None:
             return 0
-        elif self.team_one.team == team:
+        if self.team_one.team == team:
             return 1
-        elif self.team_two.team == team:
+        if self.team_two.team == team:
             return 2
-        else:
-            return 0
+        return 0
 
     def get_team_of_player(self, player: Player) -> Optional[Team]:
-        assert self.team_one is not None
-        assert self.team_two is not None
-        if self.team_one is None and self.team_two is None:
+        """ get the team of the player """
+        if self.team_one is None or self.team_two is None:
             return None
-        elif self.team_one.team is not None:
-            if self.team_one.team.has_player(player):
-                return self.team_one.team
-            else:
-                return None
-        elif self.team_two.team is not None:
-            if self.team_two.team.has_player(player):
-                return self.team_one.team
-            else:
-                return None
-        else:
-            return None
+
+        if self.team_one.team is not None:
+            return self.team_one.team if self.team_one.team.has_player(player) else None
+
+        if self.team_two.team is not None:
+            return self.team_two.team if self.team_two.team.has_player(player) else None
+
+        return None
 
     @classmethod
     def load_from(cls, conn: Database, rhs: "Match") -> Optional["Match"]:
@@ -383,37 +410,12 @@ class Match(Table, Insertable, Loadable):
         result = queried.fetchone()
 
         match_id, odds_ratio = result[:2]
-
-        t1id, t1name, t1p1id, t1p1name, t1p2id, t1p2name = result[2:8]
-        res1_id, res1_points, res1_delta = result[8:11]
-        r1 = Result(
-            result_id=res1_id,
-            team=Team(
-                team_id=t1id,
-                name=t1name,
-                player_one=Player(discord_id=t1p1id, name=t1p1name),
-                player_two=Player(discord_id=t1p2id, name=t1p2name),
-            ),
-        )
-
-        t2id, t2name, t2p1id, t2p1name, t2p2id, t2p2name = result[11:17]
-        res2_id, res2_points, res2_delta = result[17:20]
-        r2 = Result(
-            result_id=res2_id,
-            team=Team(
-                team_id=t2id,
-                name=t1name,
-                player_one=Player(discord_id=t2p1id, name=t2p1name),
-                player_two=Player(discord_id=t2p2id, name=t2p2name),
-            ),
-        )
-
-        round = Round(*result[20:24])
+        rnd = Round(*result[20:24])
         return cls(
             match_id=match_id,
-            round=round,
-            team_one=r1,
-            team_two=r2,
+            round=rnd,
+            team_one=__to_result(result[2:11]),
+            team_two=__to_result(result[11:20]),
             odds_ratio=odds_ratio,
         )
 

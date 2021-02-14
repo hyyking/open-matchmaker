@@ -1,3 +1,5 @@
+""" Database interface """
+
 import sqlite3 as sql
 import logging
 from typing import Any, Optional, Dict, cast
@@ -11,8 +13,12 @@ QUERYERROR = """{title} {{
     exception: {exception}
 }}"""
 
+__all__ = ("Database",)
+
 
 class Database:
+    """ Database abstraction from which you can check existence, insert and load """
+
     def __init__(self, path: str, log_handler=None, log_level=None):
         self.__conn = sql.connect(path)
         self.logger = logging.getLogger(__name__)
@@ -20,7 +26,7 @@ class Database:
             self.logger.setLevel(log_level)
         if log_handler:
             self.logger.addHandler(log_handler)
-        self.logger.info(f"Successfully connected to database file '{path}'")
+        self.logger.info("Successfully connected to database file '%s'", path)
         self.last_err: Optional[Dict[str, Any]] = None
 
     def __del__(self):
@@ -29,6 +35,7 @@ class Database:
 
     @property
     def conn(self) -> sql.Cursor:
+        """ get sqlite3 cursor """
         return self.__conn.cursor()
 
     def insert(self, query: Insertable, title: str = "InsertQuery") -> bool:
@@ -36,38 +43,45 @@ class Database:
         return self.execute(query.as_insert_query(), title) is not None
 
     def exists(self, table: Table, title: str = "ExistQuery") -> bool:
+        """ Check if record exists """
         conds = table.match_conditions()
         if conds is None:
             return False
         query = ColumnQuery(QueryKind.EXISTS, table.table, "1", Where(conds))
-        q = self.execute(query, title)
-        return q is None or q.fetchone()[0] == 1
+        execq = self.execute(query, title)
+        return execq is not None and execq.fetchone()[0] == 1
 
     def execute(self, query: ColumnQuery, title: str) -> Optional[sql.Cursor]:
+        """ Execute a template query """
         try:
-            q = self.conn.execute(query.render())
-            self.logger.debug(f"Executed {title} query")
-            return q
-        except Exception as err:
+            execq = self.conn.execute(query.render())
+            self.logger.debug("Executed %s query", title)
+            return execq
+        except Exception as err:  # pylint: disable=broad-except
             context = {
                 "title": title,
                 "item": query,
                 "query": query.render(),
                 "exception": err,
             }
-            self.logger.error(QUERYERROR.format(**context))
+            self.logger.error(
+                QUERYERROR.format(**context)
+            )  # pylint: disable=logging-format-interpolation
             del context["query"]
             self.last_err = context
             return None
 
     def load(self, query: Loadable, title: str = "LoadQuery") -> Optional[Loadable]:
+        """ Load the class using information of passed through rhs """
         try:
-            l = cast(Optional[Loadable], type(query).load_from(self, query))  # type: ignore
-            self.logger.debug(f"Executed {title} query")
-            return l
-        except Exception as err:
+            loaded = cast(Optional[Loadable], type(query).load_from(self, query))  # type: ignore
+            self.logger.debug("Executed %s query", title)
+            return loaded
+        except Exception as err:  # pylint: disable=broad-except
             context = {"title": "Load", "item": query, "query": None, "exception": err}
-            self.logger.error(QUERYERROR.format(**context))
+            self.logger.error(
+                QUERYERROR.format(**context)
+            )  # pylint: disable=logging-format-interpolation
             return None
 
     def summarize(self):
@@ -87,27 +101,3 @@ class Database:
     {p1_name} ({p1_id})
     {p2_name} ({p2_id})"""
             )
-
-
-#   def summarise_results(conn):
-#       """ summarise match result data """
-#       query = """
-#           SELECT turn.code, turn.start_time, team1.name, team2.name, result.points1, result.points2
-#           FROM turn
-#           INNER JOIN result ON turn.code = result.turn
-#           INNER JOIN team as team1 ON team1.code = result.team1
-#           INNER JOIN team as team2 ON team2.code = result.team2
-#       """
-#       # manual group by
-#       group = {}
-#       for val in self.conn.execute(query).fetchall():
-#           key = val[:2]
-#           val = val[2:]
-#           prev = group.get(key, [])
-#           group[key] = prev + [val]
-
-#       for ((turn, time), matches) in group.items():
-#           time = datetime.fromisoformat(time).strftime('%y-%m-%d %H:%M')
-#           print(f"{time} | {turn}:")
-#           for match in matches:
-#               print(f"    {match[0]} vs {match[1]} ({match[2]}-{match[3]})")

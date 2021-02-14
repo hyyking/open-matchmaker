@@ -1,27 +1,32 @@
+""" SQL Templating interface """
+
 import abc
 from typing import Any, List, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
 
-class AsStatement(abc.ABC):
+class AsStatement(abc.ABC):  # pylint: disable=too-few-public-methods
+    """ type that can be rendered """
+
     @abc.abstractmethod
     def render(self):
-        raise NotImplementedError
+        """ render the statement as a SQL query """
 
 
 Statement = Union[str, int, AsStatement]
 
 
-def render_statement(s: Statement) -> str:
+def render_statement(statement: Statement) -> str:
     """ removes AsStatement type of union """
-    if isinstance(s, AsStatement):
-        return s.render()
-    else:
-        return str(s)
+    if isinstance(statement, AsStatement):
+        return statement.render()
+    return str(statement)
 
 
 class QueryKind(Enum):
+    """ Supported query kinds """
+
     NONE = 0
     SELECT = 1
     EXISTS = 2
@@ -30,6 +35,8 @@ class QueryKind(Enum):
 
 @dataclass
 class WithOperand(AsStatement):
+    """ . 'operand' . """
+
     operand_1: Statement
     operand_2: Statement
     operation: str = field(init=False)
@@ -41,22 +48,23 @@ class WithOperand(AsStatement):
             op2 = f"'{self.operand_2}'"
         else:
             op2 = self.operand_2
-        op1 = render_statement(op1)
-        op2 = render_statement(op2)
-        if self.wrap:
-            return f"({op1} {self.operation} {op2})"
-        else:
-            return f"{op1} {self.operation} {op2}"
+
+        rendered = f"{render_statement(op1)} {self.operation} {render_statement(op2)}"
+        return "({rendered})" if self.wrap else rendered
 
 
 @dataclass
 class Eq(WithOperand):
+    """ SQL . = . """
+
     def __post_init__(self):
         self.operation = "="
 
 
 @dataclass
 class Or(WithOperand):
+    """ SQL (. OR .) """
+
     def __post_init__(self):
         self.operation = "OR"
         self.wrap = True
@@ -64,6 +72,8 @@ class Or(WithOperand):
 
 @dataclass
 class And(WithOperand):
+    """ SQL (. AND .) """
+
     def __post_init__(self):
         self.operation = "AND"
         self.wrap = True
@@ -73,6 +83,8 @@ Conditional = Union[Eq, Or, And]
 
 
 class Values(AsStatement, tuple):
+    """ SQL (..., ..., ) """
+
     def render(self):
         convert = lambda x: f"'{x}'" if isinstance(x, str) else str(x)
         values = ",".join(map(convert, self))
@@ -81,6 +93,8 @@ class Values(AsStatement, tuple):
 
 @dataclass
 class Sum(AsStatement):
+    """ SQL SUM(.) """
+
     header: Statement
 
     def render(self):
@@ -89,6 +103,8 @@ class Sum(AsStatement):
 
 @dataclass
 class Max(AsStatement):
+    """ SQL MAX(.) """
+
     header: Statement
 
     def render(self):
@@ -97,8 +113,10 @@ class Max(AsStatement):
 
 @dataclass
 class InnerJoin(AsStatement):
+    """ SQL INNER JOIN . [ON .] """
+
     table: Statement
-    on: Optional[Statement] = None
+    on: Optional[Statement] = None  # pylint: disable=invalid-name
 
     def render(self):
         table = render_statement(self.table)
@@ -109,6 +127,8 @@ class InnerJoin(AsStatement):
 
 @dataclass
 class Alias(AsStatement):
+    """ SQL . as . """
+
     table: str
     alias: str
 
@@ -118,6 +138,8 @@ class Alias(AsStatement):
 
 @dataclass
 class Where(AsStatement):
+    """ SQL Where """
+
     conditions: Statement
 
     def render(self):
@@ -140,6 +162,8 @@ SELECT EXISTS(
 
 @dataclass(repr=False)
 class ColumnQuery(AsStatement):
+    """ Template query implementation """
+
     kind: QueryKind
     table: str
     headers: Union[Statement, List[Statement]]
@@ -158,19 +182,23 @@ class ColumnQuery(AsStatement):
 
     @classmethod
     def eq_row(cls, table: str, key: str, value: Any, kind: QueryKind = QueryKind.NONE):
+        """ Match table row on the key and value (query.kind is not set) """
         return cls(kind, table, [key], Where(Eq(key, value)))
 
     def join_headers(self) -> str:
+        """ render the header part of the query """
         if not isinstance(self.headers, list):
             self.headers = [self.headers]
         return ",".join(map(render_statement, self.headers))
 
     def render_statements(self) -> str:
+        """ render the statement part of the query """
         if not isinstance(self.statement, list):
             self.statement = [self.statement]
-        return f" ".join(map(render_statement, self.statement))
+        return " ".join(map(render_statement, self.statement))
 
     def render(self) -> str:
+        """ render the whole query """
         context = {
             "headers": self.join_headers(),
             "table": self.table,
@@ -178,14 +206,17 @@ class ColumnQuery(AsStatement):
         }
         if self.kind is QueryKind.NONE:
             raise ValueError("QueryKind has not been specified")
-        elif self.kind is QueryKind.SELECT:
+
+        if self.kind is QueryKind.SELECT:
             return SELECT.format(**context)
-        elif self.kind is QueryKind.EXISTS:
+
+        if self.kind is QueryKind.EXISTS:
             del context["headers"]
             return EXISTS.format(**context)
-        elif self.kind is QueryKind.INSERT:
+
+        if self.kind is QueryKind.INSERT:
             return "INSERT INTO {table}({headers}) VALUES {statements}".format(
                 **context
             )
-        else:
-            raise NotImplementedError(f"Missing QueryKind {self.kind}")
+
+        raise NotImplementedError(f"Missing QueryKind {self.kind}")

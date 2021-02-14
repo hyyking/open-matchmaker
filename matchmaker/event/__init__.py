@@ -1,3 +1,5 @@
+""" Asynchronous event handling for the matchmaker """
+
 from .eventmap import EventMap
 from .event import Event, EventKind, EventHandler, EventContext
 

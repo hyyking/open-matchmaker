@@ -1,20 +1,20 @@
+""" Event handling base classes """
+
 import abc
 from dataclasses import dataclass, field
 from enum import Enum, unique
 from typing import Optional, Union
-from datetime import datetime
 
-from .error import HandlingError
 from ..tables import Team, Result, Player, Match, Round
 from ..mm.context import QueueContext, InGameContext
-from ..mm.config import Config
-from ..db import Database
 
 __all__ = ("EventKind", "EventContext", "EventHandler", "Event")
 
 
 @unique
 class EventKind(Enum):
+    """ Event kind """
+
     QUEUE = 1
     DEQUEUE = 2
 
@@ -26,6 +26,8 @@ class EventKind(Enum):
 
 @dataclass
 class EventContext:
+    """ Event context """
+
     context: Union[QueueContext, InGameContext]
 
     player: Optional[Player] = field(default=None)
@@ -36,25 +38,10 @@ class EventContext:
 
 
 class EventHandler(abc.ABC):
-    @abc.abstractproperty
-    def kind(self) -> EventKind:
-        pass
-
-    @abc.abstractproperty
-    def tag(self) -> int:
-        pass
-
-    @abc.abstractmethod
-    def is_ready(self, ctx: EventContext) -> bool:
-        pass
-
-    @abc.abstractmethod
-    def requeue(self) -> bool:
-        pass
-
-    @abc.abstractmethod
-    def handle(self, ctx: EventContext):
-        pass
+    """Asynchronous event handler
+    - kind: kind of events handled
+    - tag: unique tag
+    """
 
     def __eq__(self, rhs):
         return self.tag == rhs.tag
@@ -62,12 +49,34 @@ class EventHandler(abc.ABC):
     def __repr__(self):
         return f"{type(self).__name__}(kind={self.kind}, tag={self.tag}, requeue={self.requeue()})"
 
-
-class Event(abc.ABC):
     @abc.abstractproperty
     def kind(self) -> EventKind:
-        pass
+        """ kind of event that is handled """
+
+    @abc.abstractproperty
+    def tag(self) -> int:
+        """ unique tag """
+
+    @abc.abstractmethod
+    def is_ready(self, ctx: EventContext) -> bool:
+        """ is_ready: check context for trigger condition """
+
+    @abc.abstractmethod
+    def handle(self, ctx: EventContext):
+        """ handle: handle event implementation """
+
+    @abc.abstractmethod
+    def requeue(self) -> bool:
+        """ requeue: if false won't be requeued after trigger """
+
+
+class Event(abc.ABC):
+    """ Abstract Event """
+
+    @abc.abstractproperty
+    def kind(self) -> EventKind:
+        """ Event kind """
 
     @abc.abstractproperty
     def ctx(self) -> EventContext:
-        pass
+        """ Event context """

@@ -1,3 +1,7 @@
+""" Default event loop for the match maker :
+    QueueFull -> NewGame -> WaitForGameEnd -> ClearGame
+"""
+
 from datetime import datetime
 import logging
 
@@ -6,20 +10,24 @@ from ..mm.games import Games
 from ..mm.config import Config
 from ..mm.principal import get_principal
 from ..mm.error import GameAlreadyExistError
-from ..tables import Match, Round
+
+from . import EventMap
 
 from .event import EventHandler, EventKind, EventContext
 from .events import RoundStartEvent, RoundEndEvent
-from . import EventMap
 from .error import HandlingResult, HandlingError
+
+from ..tables import Round
 
 __all__ = ("MatchTriggerHandler", "GameEndHandler")
 
 
 class GameEndHandler(EventHandler):
-    def __init__(self, r: Round, games: Games, evmap: EventMap):
+    """ Clears appropriate contexts when a game ends """
+
+    def __init__(self, rnd: Round, games: Games, evmap: EventMap):
         self.games = games
-        self.round: Round = r
+        self.round: Round = rnd
         self.evmap = evmap
         self.logger = logging.getLogger("matchmaker.event")
 
@@ -50,11 +58,13 @@ class GameEndHandler(EventHandler):
         self.games.pop(ctx.context.key)
         self.round.end_time = datetime.now()
 
-        self.logger.info(f"Round {self.round.round_id} has ended")
+        self.logger.info("Round '%s' has ended", self.round.round_id)
         return self.evmap.handle(RoundEndEvent(ctx.context, self.round))
 
 
 class MatchTriggerHandler(EventHandler):
+    """ Creates appropriate context and clear queue when the latter is full """
+
     def __init__(self, config: Config, games: Games, evmap: EventMap):
         self.evmap = evmap
         self.games = games
@@ -85,13 +95,13 @@ class MatchTriggerHandler(EventHandler):
         if ctx.context.round.round_id is None:
             return HandlingError("Expected a round_id to trigger matches", self)
 
-        r = Round(
+        rnd = Round(
             round_id=ctx.context.round.round_id,
             start_time=datetime.now(),
             end_time=None,
             participants=len(ctx.context),
         )
-        principal = get_principal(r, self.config)
+        principal = get_principal(rnd, self.config)
         matches = principal(ctx.context.queue, ctx.context.history)
         context = InGameContext(principal, matches)
 
@@ -104,6 +114,6 @@ class MatchTriggerHandler(EventHandler):
 
         ctx.context.round.round_id += 1
 
-        self.evmap.register(GameEndHandler(r, self.games, self.evmap))
-        self.logger.info(f"Round {r.round_id} has started")
-        return self.evmap.handle(RoundStartEvent(context, r))
+        self.evmap.register(GameEndHandler(rnd, self.games, self.evmap))
+        self.logger.info("Round '%s' has started", rnd.round_id)
+        return self.evmap.handle(RoundStartEvent(context, rnd))

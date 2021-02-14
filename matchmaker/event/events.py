@@ -1,13 +1,24 @@
+""" EventContext implementations """
+
 from dataclasses import dataclass
 
 from .event import Event, EventKind, EventContext
 from ..mm.context import QueueContext, InGameContext
-from ..db import Database
-from ..tables import Team, Result, Player, Match, Round
+from ..tables import Team, Match, Round
+
+__all__ = (
+    "QueueEvent",
+    "DequeueEvent",
+    "ResultEvent",
+    "RoundStartEvent",
+    "RoundEndEvent",
+)
 
 
 @dataclass
 class QueueEvent(Event):
+    """ Team has queued """
+
     context: QueueContext
     team: Team
 
@@ -22,6 +33,8 @@ class QueueEvent(Event):
 
 @dataclass
 class DequeueEvent(Event):
+    """ Team has dequeued """
+
     context: QueueContext
     team: Team
 
@@ -36,6 +49,8 @@ class DequeueEvent(Event):
 
 @dataclass
 class ResultEvent(Event):
+    """ New result for match """
+
     context: InGameContext
     match: Match
 
@@ -53,6 +68,8 @@ class ResultEvent(Event):
 
 @dataclass
 class RoundStartEvent(Event):
+    """ New set started """
+
     context: InGameContext
     round: Round
 
@@ -67,6 +84,8 @@ class RoundStartEvent(Event):
 
 @dataclass
 class RoundEndEvent(Event):
+    """ Set ended """
+
     context: InGameContext
     round: Round
 
