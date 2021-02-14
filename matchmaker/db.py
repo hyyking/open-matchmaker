@@ -64,9 +64,7 @@ class Database:
                 "query": query.render(),
                 "exception": err,
             }
-            self.logger.error(
-                QUERYERROR.format(**context)
-            )  # pylint: disable=logging-format-interpolation
+            self.logger.error(QUERYERROR.format(**context))  # pylint: disable=W1202
             del context["query"]
             self.last_err = context
             return None
@@ -79,9 +77,7 @@ class Database:
             return loaded
         except Exception as err:  # pylint: disable=broad-except
             context = {"title": "Load", "item": query, "query": None, "exception": err}
-            self.logger.error(
-                QUERYERROR.format(**context)
-            )  # pylint: disable=logging-format-interpolation
+            self.logger.error(QUERYERROR.format(**context))  # pylint: disable=W1202
             return None
 
     def summarize(self):
