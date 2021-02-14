@@ -45,7 +45,7 @@ class AdminCog(commands.Cog, BotContext):
     @commands.command()
     @commands.has_role("matchmaker_admin")
     async def reset(self, ctx):
-        ctx.bot.mm.reset()
+        ctx.bot.reset()
         message = ctx.bot.fmtok("Matchmaker has been reset")
         await ctx.message.channel.send(content=message, reference=ctx.message)
 

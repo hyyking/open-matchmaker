@@ -95,7 +95,7 @@ class MatchEndHandler(EventHandler):
         assert igctx.round.end_time is not None
         assert igctx.round.start_time is not None
 
-        duration = (igctx.round.end_time - igctx.round.start_time)
+        duration = igctx.round.end_time - igctx.round.start_time
         H, rem = divmod(duration.seconds, 3600)
         M, S = divmod(rem, 60)
 

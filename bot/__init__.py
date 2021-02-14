@@ -35,9 +35,7 @@ class MatchMakerBot(commands.Bot):
         round_id = 0 if round_id is None else round_id
 
         self.mm = MatchMaker(mmcfg, Round(round_id=round_id + 1))
-        self.mm.register_handler(MatchStartHandler(self.loop))
-        self.mm.register_handler(MatchEndHandler(self.loop))
-        self.mm.register_handler(ResultHandler(self.db))
+        self.register_handlers()
 
         for cog in COGS:
             self.add_cog(cog(self.db, self.mm))
@@ -47,6 +45,15 @@ class MatchMakerBot(commands.Bot):
 
     def fmtok(self, ok):
         return f"{self.config.ok_prefix}    `{ok}`"
+
+    def reset(self):
+        self.mm.reset()
+        self.register_handlers()
+
+    def register_handlers(self):
+        self.mm.register_handler(MatchStartHandler(self.loop))
+        self.mm.register_handler(MatchEndHandler(self.loop))
+        self.mm.register_handler(ResultHandler(self.db))
 
     async def on_message(self, message):
         is_command = (

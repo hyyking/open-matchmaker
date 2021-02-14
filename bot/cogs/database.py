@@ -139,7 +139,7 @@ class DatabaseCog(commands.Cog, BotContext):
                 name=tn,
                 player_one=Player(discord_id=p1id, name=p1name),
                 player_two=Player(discord_id=p2id, name=p2name),
-                elo=elo
+                elo=elo,
             )
 
         q = self.db.execute(query, "FetchLeaderboard")
@@ -211,8 +211,12 @@ class DatabaseCog(commands.Cog, BotContext):
                 name = team[0].team_name if len(team) > 0 else ""
                 axes.plot(*zip(*map(SmallResult.as_tuple, team)), label=name)
 
-        plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
-        plt.title("Elo variations for all teams" if who is None else f"Elo variation for {who.name}")
+        plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", borderaxespad=0)  # type: ignore
+        plt.title(
+            "Elo variations for all teams"
+            if who is None
+            else f"Elo variation for {who.name}"
+        )
         plt.xlabel("Round")
         plt.ylabel("Elo variation")
         plt.axhline(y=0, color="k")
