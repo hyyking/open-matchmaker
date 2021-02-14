@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 __all__ = ("Config",)
 
 
-def __default_period() -> Dict[str, float]:
+def _default_period() -> Dict[str, float]:
     return {"active": 3, "duty_cycle": 1}
 
 
@@ -18,7 +18,7 @@ class Config:
     points_per_match: int = field(default=1)
     k_factor: int = field(default=32)
 
-    period: Dict[str, float] = field(default_factory=__default_period)
+    period: Dict[str, float] = field(default_factory=_default_period)
 
     trigger_threshold: int = field(default=10)
     max_history: int = field(default=3)

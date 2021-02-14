@@ -50,7 +50,7 @@ class WithOperand(AsStatement):
             op2 = self.operand_2
 
         rendered = f"{render_statement(op1)} {self.operation} {render_statement(op2)}"
-        return "({rendered})" if self.wrap else rendered
+        return f"({rendered})" if self.wrap else rendered
 
 
 @dataclass
