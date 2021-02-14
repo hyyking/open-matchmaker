@@ -7,22 +7,22 @@ Ce projet a été écrit dans le cadre du cours de python M1 ISF et du tournoi
 novembre 2020.
 
 Le but était d'organiser une suite de matchs et determiner la meilleure équipe. Afin de jouer le
-maximum de matchs possibles, j'ai décidé de ne pas utiliser un format de tournoi classique qui limitent
+maximum de matchs possibles, j'ai décidé de ne pas utiliser un format de tournoi classique qui limite
 les rencontres entre les équipes. En effet sur un format classique les gagnants jouent les gagnants,
 une option aurai été d'utiliser un tournoi à 2-3 éliminations mais les novices sont tout de même rapidement
 éliminés.
 
 Une manière de regler ce problème est d'éstimer le niveau des équipes et de faire des matchs équilibrés.
-De cette manière les matchs sont équilibrés, permettent de comparer les niveaux et font jouer toutes les
-équipes constament.
+De cette manière il est possible de comparer le niveau des équipes et faire jouer toutes les équipes constament.
 
 \pagebreak
+
 ## Le modèle
 Afin d'éstimer le niveau des équipes j'ai mis en place un système d'[élo](https://en.wikipedia.org/wiki/Elo_rating_system),
-système initialement utilisé par les joueurs d'échecs puis étendu plus largement aux jeux en ligne.
+initialement utilisé par les joueurs d'échecs puis étendu plus largement aux jeux en ligne.
 L'avantage de ce système est que l'élo est propre à chaque équipe, il represente le niveaux théorique de
-l'équipe en la plaçant sur un quantile de distribution.  Par la loi centrale limite les équipes
-convergent vers leur élo réel et la distribution des équipes est gaussienne. Ainsi l'ajout et le retrait
+l'équipe en la plaçant sur un quantile de distribution.  Par le theoreme centrale limite les équipes
+convergent vers leur élo réel et la distribution des élo est gaussienne. Ainsi l'ajout et le retrait
 d'une équipe n'affecte pas les scores ni le format du tournoi.
 
 Pour initiliser une équipe on lui affecte l'élo moyen, il s'agit du premier paramètre du modèle,
@@ -58,10 +58,10 @@ Où facteur `K` (dans le modèle `K = 16`) est le facteur d'ajustement de l'élo
 Ainsi une défaite avec un score supérieur au score attendu fait augmenter l'élo de l'équipe.
 
 \pagebreak
-## La base de donnée
+## La base de données
 
 Les données sont stockés dans une base de donnée `sqlite3`, l'avantage est le stockage sur un fichier et
-la présence de l'interface dans la librairie standart de python. La base de donnée est composé de 4 tableaux.
+la présence de l'interface dans la librairie standart de python. La base de données est composée de 4 tableaux.
 Le tableau de résultat stocke l'élo avant le match, permettant de charger l'état du monde en récupérant
 seulement les résultats du round précédent. Une option aurait été de stocker
 $$\Delta R_i = \tilde{R}_i - R_i = K * (S_i - E_i) $$ pour chaque match, solution plus efficace pour un
@@ -113,15 +113,17 @@ Le modèle d'appariement est plutôt simple, il s'agit d'une maximisation de l'u
 Ici le principal est le programme et la fonction d'utilité est la somme des utilités marginales des matchs.
 
 L'utilité est également dépendente d'un paramètre saisonier. En effet avec un système d'élo les équipes
-avec un élo proche jouent les unes contres le autres, or dans le cas d'un tournoi amicale il est préférable
+ayant un élo proche jouent les unes contres le autres, or dans le cas d'un tournoi amicale il est préférable
 que toutes les équipes se rencontrent. Ainsi j'ai mis en place ce paramètre qui augmente périodiquement l'utilité des matchs déséquilibré.
 
 La fonction d'utilité d'un match est donnée par:
 
 $$ U(E_a, E_b, i) = \exp\{-|E_a - E_b|\} + \frac{p(i)}{\exp\{-|E_a - E_b|\}} $$
 
-Avec p(i) une fonction sinusoïdale carré active (1) en T pendant D et 0 sinon. T représente la période de la fonction et D le temps d'activation. Dans le modèle `T = 3` et `D = 0.2`, soit toutes les 3 périodes
-pendant 1 période. La fonction est représentée ci-dessous en temps discret:
+Avec p(i) une fonction sinusoïdale carré active (1) en T pendant D et 0 sinon.
+T représente la période de la fonction et D le temps d'activation.
+Dans le modèle `T = 3` et `D = 0.2`, soit toutes les 3 périodes pendant 1 période.
+La fonction est représentée ci-dessous en temps discret:
 
 ![p(i)](static/sin.png)
 
@@ -169,7 +171,7 @@ L'algorithme d'appariement est alors le suivant:
 * Si le tour est 0: Créer un set aléatoirement 
 * Si le tour est != 0:
   1. Generer tous les matchs possibles
-  2. Soustraire les matchs joués les n derniers rounds (pour eviter les sets équivalents n=T+1)
+  2. Soustraire les matchs joués les n derniers rounds
   3. Generer tous les sets possibles (combinaisons d'ordre $n % 2 == 0$)
   4. Filtrer les sets impossibles (une équipe joue plus d'une fois)
   5. Choisir le set apportant le plus d'utilité 
@@ -292,9 +294,9 @@ Lecture: A(R_a) VS B(R_b) ~ E_a-E_b
 
 ## Conclusion
 Le programme a été utilisé avec succès lors de l'evènement. En tant que joueurs j'ai vu la qualité des
-matchs s'améliorer passé les 3 premiers match. L'impact du paramètre saisonnier était largement visible dans
+matchs s'améliorer passé les 3 premiers matchs. L'impact du paramètre saisonnier était largement visible dans
 les resultats des matchs multiples de 3. Le paramètre d'ajustement (`K`) était assez faible pour maintenir
 des élos proches et créer de la competition.
 Cependant le programme a tout de même des problèmes: il faut un nombre pair d'équipes, il faut également 
 ajouter des rounds à la main. Enfin si le paramètre d'historique est mal paramétré on peut se retrouver
-avec un graphe disjoint d'ordre impair implicant qu'il est impossible de former un nombre pair de matchs.
+avec un graphe disjoint d'ordre impair, implicant qu'il est impossible de former un nombre pair de matchs.
